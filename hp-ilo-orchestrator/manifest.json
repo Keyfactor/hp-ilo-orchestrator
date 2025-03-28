@@ -1,0 +1,18 @@
+﻿{
+	"extensions": {
+		"Keyfactor.Orchestrators.Extensions.IOrchestratorJobExtension": {
+			"CertStores.HPiLO.Inventory": {
+				"assemblypath": "Keyfactor.Orchestrators.HPiLO.dll",
+				"TypeFullName": "Keyfactor.Extensions.Orchestrator.HPiLO.Jobs.Inventory"
+			},
+			"CertStores.HPiLO.Reenrollment": {
+				"assemblypath": "Keyfactor.Orchestrators.HPiLO.dll",
+				"TypeFullName": "Keyfactor.Extensions.Orchestrator.HPiLO.Jobs.Reenrollment"
+			},
+			"CertStores.HPiLO.Management": {
+				"assemblypath": "Keyfactor.Orchestrators.HPiLO.dll",
+				"TypeFullName": "Keyfactor.Extensions.Orchestrator.HPiLO.Jobs.Reenrollment"
+			}
+		}
+	}
+}

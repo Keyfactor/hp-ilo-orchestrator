@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Keyfactor.Orchestrators.SOS": {
+      "commandName": "Project",
+      "remoteDebugEnabled": true
+    }
+  }
+}

@@ -5,9 +5,9 @@
 <p align="center">
   <!-- Badges -->
 <img src="https://img.shields.io/badge/integration_status-pilot-3D1973?style=flat-square" alt="Integration Status: pilot" />
-<a href="https://github.com/Keyfactor/hp-ilo-orchestrator-dev/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/hp-ilo-orchestrator-dev?style=flat-square" alt="Release" /></a>
-<img src="https://img.shields.io/github/issues/Keyfactor/hp-ilo-orchestrator-dev?style=flat-square" alt="Issues" />
-<img src="https://img.shields.io/github/downloads/Keyfactor/hp-ilo-orchestrator-dev/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
+<a href="https://github.com/Keyfactor/hp-ilo-orchestrator/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/hp-ilo-orchestrator?style=flat-square" alt="Release" /></a>
+<img src="https://img.shields.io/github/issues/Keyfactor/hp-ilo-orchestrator?style=flat-square" alt="Issues" />
+<img src="https://img.shields.io/github/downloads/Keyfactor/hp-ilo-orchestrator/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
 </p>
 
 <p align="center">
@@ -46,7 +46,7 @@ At present, only the HTTPS certificate used for connection to the HPiLO system/A
 - iLOLDevID (Certificate used for 802.1x authentication)
 
 
-This extension also supports inventory of the following factory-installed certificates (with the ):
+This extension also supports inventory of the following factory-installed certificates (with the InventoryAll custom field set to True in Certificate Store Type):
 - Platform Cert
 - SystemIAK
 - SystemIDevID
@@ -58,9 +58,10 @@ This extension also supports inventory of the following factory-installed certif
 
 #### Reenrollment:
 - HTTPS Cert
-- iLOLDevID (802.1x Cert)
+- iLOLDevID (802.1x Cert)\
 Note:
-Reenrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO deployment). Please see (HP iLO API Reference)[https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager] for reference on managers.
+Reenrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO deployment). Please see [HP iLO API Reference](https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager) for reference on managers. \
+Due to the way the HPiLO API is set up, to perform reenrollment, the CN field must be set to the FQDN of the HPiLO instance. The FQDN typically follows a pattern of "ILOXXXXXXXXXX". If reenrolling the HTTPS Certificate, the CN must be set to include the full FQDN string, including the "ILO" characters, as "ILOXXXXXXXXXX". For reenrollment of the iLOLDevID certificate, it should be just the remaining characters of the FQDN string, without the "ILO", as "XXXXXXXXXX".
 
 ## Compatibility
 
@@ -170,8 +171,8 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 
 1. **Download the latest HP iLO Universal Orchestrator extension from GitHub.** 
 
-    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator-dev/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
-    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `hp-ilo-orchestrator-dev` .NET version to download |
+    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `hp-ilo-orchestrator` .NET version to download |
     | --------- | ----------- | ----------- | ----------- |
     | Older than `11.0.0` | | | `net6.0` |
     | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` | 
@@ -190,10 +191,10 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
     
 3. **Create a new directory for the HP iLO Universal Orchestrator extension inside the extensions directory.**
         
-    Create a new directory called `hp-ilo-orchestrator-dev`.
+    Create a new directory called `hp-ilo-orchestrator`.
     > The directory name does not need to match any names used elsewhere; it just has to be unique within the extensions directory.
 
-4. **Copy the contents of the downloaded and unzipped assemblies from __step 2__ to the `hp-ilo-orchestrator-dev` directory.**
+4. **Copy the contents of the downloaded and unzipped assemblies from __step 2__ to the `hp-ilo-orchestrator` directory.**
 
 5. **Restart the Universal Orchestrator service.**
 
@@ -275,13 +276,13 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 
 
 ### Certificate Store Type Custom Fields
-- Inventory All\
+- InventoryAll\
 Allows for inventory of factory-installed certificates as listed above.
 
 - IgnoreValidation\
 WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. 
 
--HTTPS Cert Wait Time\
+- HTTPS Cert Wait Time\
 The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted.
 
 

@@ -65,7 +65,7 @@ Due to the way the HPiLO API is set up, to perform reenrollment, the CN field mu
 
 ## Compatibility
 
-This integration is compatible with Keyfactor Universal Orchestrator version 10.1 and later.
+This integration is compatible with Keyfactor Universal Orchestrator version 24.4 and later.
 
 ## Support
 The HP iLO Universal Orchestrator extension If you have a support issue, please open a support ticket by either contacting your Keyfactor representative or via the Keyfactor Support Portal at https://support.keyfactor.com. 
@@ -91,7 +91,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 * **Create HPiLO using kfutil**:
 
     ```shell
-    # HPiLO
+    # HP iLO Cert Store
     kfutil store-types create HPiLO
     ```
 
@@ -103,16 +103,16 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
     #### Basic Tab
     | Attribute | Value | Description |
     | --------- | ----- | ----- |
-    | Name | HPiLO | Display name for the store type (may be customized) |
+    | Name | HP iLO Cert Store | Display name for the store type (may be customized) |
     | Short Name | HPiLO | Short display name for the store type |
     | Capability | HPiLO | Store type name orchestrator will register with. Check the box to allow entry of value |
     | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
     | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
-    | Supports Discovery | ✅ Checked | Check the box. Indicates that the Store Type supports Discovery |
+    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
     | Supports Reenrollment | ✅ Checked |  Indicates that the Store Type supports Reenrollment |
-    | Supports Create | ✅ Checked | Check the box. Indicates that the Store Type supports store creation |
+    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
     | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
-    | Blueprint Allowed | ✅ Checked | Determines if store type may be included in an Orchestrator blueprint |
+    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
     | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
     | Requires Store Password | 🔲 Unchecked | Enables users to optionally specify a store password when defining a Certificate Store. |
     | Supports Entry Password | ✅ Checked | Determines if an individual entry within a store can have a password. |
@@ -124,7 +124,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
     #### Advanced Tab
     | Attribute | Value | Description |
     | --------- | ----- | ----- |
-    | Supports Custom Alias | Optional | Determines if an individual entry within a store can have a custom Alias. |
+    | Supports Custom Alias | Forbidden | Determines if an individual entry within a store can have a custom Alias. |
     | Private Key Handling | Optional | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
     | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
 
@@ -139,29 +139,13 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 
     | Name | Display Name | Description | Type | Default Value/Options | Required |
     | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
-    | StoreNameString | Store Name | The Store name for the particular SOS store. | String |  | 🔲 Unchecked |
-    | ForTestingOnlyBool | For Testing Only | Test bool variable. | Bool | true | 🔲 Unchecked |
-    | CollectionNameMultipleChoice | Collection Name | A test collection. | MultipleChoice | internal | ✅ Checked |
-    | PrivateDetailsSecret | Private Details | A test secret. | Secret | test | 🔲 Unchecked |
+    | InventoryAll | InventoryAll |  | Bool | false | ✅ Checked |
+    | IgnoreValidation | IgnoreValidation |  | Bool | true | ✅ Checked |
+    | HTTPSCertWaitTime | HTTPS Cert Wait Time |  | String | 60 | ✅ Checked |
 
     The Custom Fields tab should look like this:
 
     ![HPiLO Custom Fields Tab](docsource/images/HPiLO-custom-fields-store-type-dialog.png)
-
-
-
-    #### Entry Parameters Tab
-
-    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
-    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
-    | CommaSeparatedSansString | SANs | SAN string. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | CertColorMultipleChoice | Certificate Color | A test variable with multiple choice. | MultipleChoice | red | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | ForTestingOnlyBool | For Testing Only | Another test boolean. | Bool | true | ✅ Checked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | PrivateCertDetailsSecret | Private Cert Details | A per cert secret. | Secret | test | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-
-    The Entry Parameters tab should look like this:
-
-    ![HPiLO Entry Parameters Tab](docsource/images/HPiLO-entry-parameters-store-type-dialog.png)
 
 
 
@@ -223,15 +207,14 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
         | Attribute | Description |
         | --------- | ----------- |
-        | Category | Select "HPiLO" or the customized certificate store name from the previous step. |
+        | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
         | Client Machine | Runs on a Windows based machine. |
-        | Store Path | Path points to a local .json file. Orchestrator and its account should have read/write access. |
+        | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | StoreNameString | The Store name for the particular SOS store. |
-        | ForTestingOnlyBool | Test bool variable. |
-        | CollectionNameMultipleChoice | A test collection. |
-        | PrivateDetailsSecret | A test secret. |
+        | InventoryAll |  |
+        | IgnoreValidation |  |
+        | HTTPSCertWaitTime |  |
 
 
         
@@ -252,15 +235,14 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
         | Attribute | Description |
         | --------- | ----------- |
-        | Category | Select "HPiLO" or the customized certificate store name from the previous step. |
+        | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
         | Client Machine | Runs on a Windows based machine. |
-        | Store Path | Path points to a local .json file. Orchestrator and its account should have read/write access. |
+        | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | StoreNameString | The Store name for the particular SOS store. |
-        | ForTestingOnlyBool | Test bool variable. |
-        | CollectionNameMultipleChoice | A test collection. |
-        | PrivateDetailsSecret | A test secret. |
+        | InventoryAll |  |
+        | IgnoreValidation |  |
+        | HTTPSCertWaitTime |  |
 
 
         

@@ -31,22 +31,23 @@
 
 ## Overview
 
-This is an HPiLO orchestrator extension.
+The HPiLO orchestrator extension allows for management certificates on HP Integrated Lights-Out (iLO) remote 
+server management technology embedded in HPE servers.
 
 
 
 ### HPiLO
 
-This orchestrator extension supports the following operations:
+The `HPiLO` store type is used to manage the HTTPS certificate used for connection to the HPiLO UI/API. 
 
 #### Inventory:
-- The HTTPS Cert used for connection to this instance of HPiLO\
-Note: 
-At present, only the HTTPS certificate used for connection to the HPiLO system/API can be inventoried, due to the limitations of the HP iLO API.
+- The HTTPS Cert used for connection to this instance of HPiLO
+**Note:** At present, only the HTTPS certificate used for connection to the HPiLO system/API can be inventoried, 
+due to the limitations of the HP iLO API.
 - iLOLDevID (Certificate used for 802.1x authentication)
 
-
-This extension also supports inventory of the following factory-installed certificates (with the InventoryAll custom field set to True in Certificate Store Type):
+This extension also supports inventory of the following factory-installed certificates (with the `InventoryAll` custom 
+field set to `True` in Certificate Store Type configuration):
 - Platform Cert
 - SystemIAK
 - SystemIDevID
@@ -56,12 +57,15 @@ This extension also supports inventory of the following factory-installed certif
 - HTTPS Cert
 - iLOLDevID (802.1x Cert)
 
-#### Reenrollment:
+#### Re-enrollment:
 - HTTPS Cert
 - iLOLDevID (802.1x Cert)\
-Note:
-Reenrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO deployment). Please see [HP iLO API Reference](https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager) for reference on managers. \
-Due to the way the HPiLO API is set up, to perform reenrollment, the CN field must be set to the FQDN of the HPiLO instance. The FQDN typically follows a pattern of "ILOXXXXXXXXXX". If reenrolling the HTTPS Certificate, the CN must be set to include the full FQDN string, including the "ILO" characters, as "ILOXXXXXXXXXX". For reenrollment of the iLOLDevID certificate, it should be just the remaining characters of the FQDN string, without the "ILO", as "XXXXXXXXXX".
+**Note:** Re-enrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO
+deployment). Please see [HP iLO API Reference](https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager) for reference on managers. Due to the way the HPiLO API is set up, 
+to perform re-enrollment, the CN field must be set to the FQDN of the HPiLO instance. The FQDN typically follows a 
+pattern of `ILOXXXXXXXXXX`. If re-enrolling the HTTPS Certificate, the CN must be set to include the full FQDN string, 
+including the "ILO" characters, as `ILOXXXXXXXXXX`. For re-enrollment of the iLOLDevID certificate, it should be just 
+the remaining characters of the FQDN string, without the "ILO", as `XXXXXXXXXX`.
 
 ## Compatibility
 
@@ -139,9 +143,9 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 
     | Name | Display Name | Description | Type | Default Value/Options | Required |
     | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
-    | InventoryAll | InventoryAll |  | Bool | false | ✅ Checked |
-    | IgnoreValidation | IgnoreValidation |  | Bool | true | ✅ Checked |
-    | HTTPSCertWaitTime | HTTPS Cert Wait Time |  | String | 60 | ✅ Checked |
+    | InventoryAll | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` | Bool | false | ✅ Checked |
+    | IgnoreValidation | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. | Bool | true | ✅ Checked |
+    | HTTPSCertWaitTime | HTTPS Cert Wait Time | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. | String | 60 | ✅ Checked |
 
     The Custom Fields tab should look like this:
 
@@ -212,9 +216,9 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         | Client Machine | Runs on a Windows based machine. |
         | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | InventoryAll |  |
-        | IgnoreValidation |  |
-        | HTTPSCertWaitTime |  |
+        | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
+        | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. |
+        | HTTPSCertWaitTime | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. |
 
 
         
@@ -240,9 +244,9 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         | Client Machine | Runs on a Windows based machine. |
         | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | InventoryAll |  |
-        | IgnoreValidation |  |
-        | HTTPSCertWaitTime |  |
+        | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
+        | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. |
+        | HTTPSCertWaitTime | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. |
 
 
         
@@ -257,24 +261,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 > The content in this section can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
 
 
-### Certificate Store Type Custom Fields
-- InventoryAll\
-Allows for inventory of factory-installed certificates as listed above.
 
-- IgnoreValidation\
-WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. 
-
-- HTTPS Cert Wait Time\
-The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted.
-
-
-
-## Installation
-
-The compiled binaries can be deployed to the extensions folder at the location of the Universal Orchestrator installation. However, to get the most use out of this extension, it is recommended to use the Visual Studio project. You should either install Visual Studio on the machine you run the orchestrator or link the debugger remotely. In case you setup Visual Studio locally, you could use a symlink to link the Visual studio output directory to the extensions folder, specifically making a subfolder named "SOS". Once this is done and the code is compiled, you can attach the Visual Studio debugger to the Universal Orchestrator process for efficient debugging and variable inspection. The Sample Key Store certificate store type also needs to be added to Keyfactor. The exact settings are available in the install folder in this repository. This extension is configured to automatically log all incoming data it receives from the Universal Orchestrator. The log level needs to be set to at least Debug in the Universal Orchestrator settings for this information to appear in the logs. 
-
-The overview of the Sample Orchestrator Store type is available here:
-* [HP iLO Store Type](docs/hpilo.md)
 
 
 ## License

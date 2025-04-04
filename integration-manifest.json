@@ -53,23 +53,26 @@
               "DisplayName": "InventoryAll",
               "Type": "Bool",
               "DefaultValue": "false",
-              "Required": true
+              "Required": true,
+              "Description": "Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA`"
             },
             {
               "Name": "IgnoreValidation",
               "DisplayName": "IgnoreValidation",
               "Type": "Bool",
               "DefaultValue": "true",
-              "Required": true
-            }, 
+              "Required": true,
+              "Description": "WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint."
+            },
             {
               "Name": "HTTPSCertWaitTime",
               "DisplayName": "HTTPS Cert Wait Time",
               "Type": "String",
               "DefaultValue": "60",
-              "Required": true
+              "Required": true,
+              "Description": "The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted."
             }
-          ],        
+          ],
           "PasswordOptions": {
             "EntrySupported": true,
             "StoreRequired": false,

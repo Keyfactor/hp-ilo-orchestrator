@@ -31,22 +31,23 @@
 
 ## Overview
 
-This is an HPiLO orchestrator extension.
+The HPiLO orchestrator extension allows for management certificates on HP Integrated Lights-Out (iLO) remote 
+server management technology embedded in HPE servers.
 
 
 
 ### HPiLO
 
-This orchestrator extension supports the following operations:
+The `HPiLO` store type is used to manage the HTTPS certificate used for connection to the HPiLO UI/API. 
 
 #### Inventory:
-- The HTTPS Cert used for connection to this instance of HPiLO\
-Note: 
-At present, only the HTTPS certificate used for connection to the HPiLO system/API can be inventoried, due to the limitations of the HP iLO API.
+- The HTTPS Cert used for connection to this instance of HPiLO
+**Note:** At present, only the HTTPS certificate used for connection to the HPiLO system/API can be inventoried, 
+due to the limitations of the HP iLO API.
 - iLOLDevID (Certificate used for 802.1x authentication)
 
-
-This extension also supports inventory of the following factory-installed certificates (with the InventoryAll custom field set to True in Certificate Store Type):
+This extension also supports inventory of the following factory-installed certificates (with the `InventoryAll` custom 
+field set to `True` in Certificate Store Type configuration):
 - Platform Cert
 - SystemIAK
 - SystemIDevID
@@ -56,16 +57,19 @@ This extension also supports inventory of the following factory-installed certif
 - HTTPS Cert
 - iLOLDevID (802.1x Cert)
 
-#### Reenrollment:
+#### Re-enrollment:
 - HTTPS Cert
 - iLOLDevID (802.1x Cert)\
-Note:
-Reenrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO deployment). Please see [HP iLO API Reference](https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager) for reference on managers. \
-Due to the way the HPiLO API is set up, to perform reenrollment, the CN field must be set to the FQDN of the HPiLO instance. The FQDN typically follows a pattern of "ILOXXXXXXXXXX". If reenrolling the HTTPS Certificate, the CN must be set to include the full FQDN string, including the "ILO" characters, as "ILOXXXXXXXXXX". For reenrollment of the iLOLDevID certificate, it should be just the remaining characters of the FQDN string, without the "ILO", as "XXXXXXXXXX".
+**Note:** Re-enrollment is only supported for certificates hosted on internal manager 1 (a scenario typical for an HPiLO
+deployment). Please see [HP iLO API Reference](https://servermanagementportal.ext.hpe.com/docs/redfishservices/ilos/ilo6/ilo6_158/ilo6_manager_resourcedefns158/#manager) for reference on managers. Due to the way the HPiLO API is set up, 
+to perform re-enrollment, the CN field must be set to the FQDN of the HPiLO instance. The FQDN typically follows a 
+pattern of `ILOXXXXXXXXXX`. If re-enrolling the HTTPS Certificate, the CN must be set to include the full FQDN string, 
+including the "ILO" characters, as `ILOXXXXXXXXXX`. For re-enrollment of the iLOLDevID certificate, it should be just 
+the remaining characters of the FQDN string, without the "ILO", as `XXXXXXXXXX`.
 
 ## Compatibility
 
-This integration is compatible with Keyfactor Universal Orchestrator version 10.1 and later.
+This integration is compatible with Keyfactor Universal Orchestrator version 24.4 and later.
 
 ## Support
 The HP iLO Universal Orchestrator extension If you have a support issue, please open a support ticket by either contacting your Keyfactor representative or via the Keyfactor Support Portal at https://support.keyfactor.com. 
@@ -91,7 +95,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 * **Create HPiLO using kfutil**:
 
     ```shell
-    # HPiLO
+    # HP iLO Cert Store
     kfutil store-types create HPiLO
     ```
 
@@ -103,16 +107,16 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
     #### Basic Tab
     | Attribute | Value | Description |
     | --------- | ----- | ----- |
-    | Name | HPiLO | Display name for the store type (may be customized) |
+    | Name | HP iLO Cert Store | Display name for the store type (may be customized) |
     | Short Name | HPiLO | Short display name for the store type |
     | Capability | HPiLO | Store type name orchestrator will register with. Check the box to allow entry of value |
     | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
     | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
-    | Supports Discovery | ✅ Checked | Check the box. Indicates that the Store Type supports Discovery |
+    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
     | Supports Reenrollment | ✅ Checked |  Indicates that the Store Type supports Reenrollment |
-    | Supports Create | ✅ Checked | Check the box. Indicates that the Store Type supports store creation |
+    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
     | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
-    | Blueprint Allowed | ✅ Checked | Determines if store type may be included in an Orchestrator blueprint |
+    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
     | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
     | Requires Store Password | 🔲 Unchecked | Enables users to optionally specify a store password when defining a Certificate Store. |
     | Supports Entry Password | ✅ Checked | Determines if an individual entry within a store can have a password. |
@@ -124,7 +128,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
     #### Advanced Tab
     | Attribute | Value | Description |
     | --------- | ----- | ----- |
-    | Supports Custom Alias | Optional | Determines if an individual entry within a store can have a custom Alias. |
+    | Supports Custom Alias | Forbidden | Determines if an individual entry within a store can have a custom Alias. |
     | Private Key Handling | Optional | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
     | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
 
@@ -139,29 +143,13 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 
     | Name | Display Name | Description | Type | Default Value/Options | Required |
     | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
-    | StoreNameString | Store Name | The Store name for the particular SOS store. | String |  | 🔲 Unchecked |
-    | ForTestingOnlyBool | For Testing Only | Test bool variable. | Bool | true | 🔲 Unchecked |
-    | CollectionNameMultipleChoice | Collection Name | A test collection. | MultipleChoice | internal | ✅ Checked |
-    | PrivateDetailsSecret | Private Details | A test secret. | Secret | test | 🔲 Unchecked |
+    | InventoryAll | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` | Bool | false | ✅ Checked |
+    | IgnoreValidation | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. | Bool | true | ✅ Checked |
+    | HTTPSCertWaitTime | HTTPS Cert Wait Time | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. | String | 60 | ✅ Checked |
 
     The Custom Fields tab should look like this:
 
     ![HPiLO Custom Fields Tab](docsource/images/HPiLO-custom-fields-store-type-dialog.png)
-
-
-
-    #### Entry Parameters Tab
-
-    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
-    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
-    | CommaSeparatedSansString | SANs | SAN string. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | CertColorMultipleChoice | Certificate Color | A test variable with multiple choice. | MultipleChoice | red | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | ForTestingOnlyBool | For Testing Only | Another test boolean. | Bool | true | ✅ Checked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-    | PrivateCertDetailsSecret | Private Cert Details | A per cert secret. | Secret | test | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-
-    The Entry Parameters tab should look like this:
-
-    ![HPiLO Entry Parameters Tab](docsource/images/HPiLO-entry-parameters-store-type-dialog.png)
 
 
 
@@ -223,15 +211,14 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
         | Attribute | Description |
         | --------- | ----------- |
-        | Category | Select "HPiLO" or the customized certificate store name from the previous step. |
+        | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
         | Client Machine | Runs on a Windows based machine. |
-        | Store Path | Path points to a local .json file. Orchestrator and its account should have read/write access. |
+        | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | StoreNameString | The Store name for the particular SOS store. |
-        | ForTestingOnlyBool | Test bool variable. |
-        | CollectionNameMultipleChoice | A test collection. |
-        | PrivateDetailsSecret | A test secret. |
+        | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
+        | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. |
+        | HTTPSCertWaitTime | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. |
 
 
         
@@ -252,15 +239,14 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
         Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
         | Attribute | Description |
         | --------- | ----------- |
-        | Category | Select "HPiLO" or the customized certificate store name from the previous step. |
+        | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
         | Client Machine | Runs on a Windows based machine. |
-        | Store Path | Path points to a local .json file. Orchestrator and its account should have read/write access. |
+        | Store Path | Path points to the HPiLO instance address, IP or domain name. |
         | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
-        | StoreNameString | The Store name for the particular SOS store. |
-        | ForTestingOnlyBool | Test bool variable. |
-        | CollectionNameMultipleChoice | A test collection. |
-        | PrivateDetailsSecret | A test secret. |
+        | InventoryAll | Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
+        | IgnoreValidation | WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. |
+        | HTTPSCertWaitTime | The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted. |
 
 
         
@@ -275,24 +261,7 @@ To use the HP iLO Universal Orchestrator extension, you **must** create the HPiL
 > The content in this section can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
 
 
-### Certificate Store Type Custom Fields
-- InventoryAll\
-Allows for inventory of factory-installed certificates as listed above.
 
-- IgnoreValidation\
-WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. 
-
-- HTTPS Cert Wait Time\
-The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted.
-
-
-
-## Installation
-
-The compiled binaries can be deployed to the extensions folder at the location of the Universal Orchestrator installation. However, to get the most use out of this extension, it is recommended to use the Visual Studio project. You should either install Visual Studio on the machine you run the orchestrator or link the debugger remotely. In case you setup Visual Studio locally, you could use a symlink to link the Visual studio output directory to the extensions folder, specifically making a subfolder named "SOS". Once this is done and the code is compiled, you can attach the Visual Studio debugger to the Universal Orchestrator process for efficient debugging and variable inspection. The Sample Key Store certificate store type also needs to be added to Keyfactor. The exact settings are available in the install folder in this repository. This extension is configured to automatically log all incoming data it receives from the Universal Orchestrator. The log level needs to be set to at least Debug in the Universal Orchestrator settings for this information to appear in the logs. 
-
-The overview of the Sample Orchestrator Store type is available here:
-* [HP iLO Store Type](docs/hpilo.md)
 
 
 ## License

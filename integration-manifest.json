@@ -11,22 +11,22 @@
   "release_dir": "hp-ilo-orchestrator/bin/Release",
   "about": {
     "orchestrator": {
-      "UOFramework": "10.1",
-      "keyfactor_platform_version": "10.0",
+      "UOFramework": "24.4",
+      "keyfactor_platform_version": "24.4",
       "pam_support": true,
       "win": {
-        "supportsCreateStore": true,
+        "supportsCreateStore": false,
         "supportsDiscovery": true,
-        "supportsManagementAdd": true,
+        "supportsManagementAdd": false,
         "supportsManagementRemove": true,
         "supportsReenrollment": true,
         "supportsInventory": true,
         "platformSupport": "Unused"
       },
       "linux": {
-        "supportsCreateStore": true,
+        "supportsCreateStore": false,
         "supportsDiscovery": true,
-        "supportsManagementAdd": true,
+        "supportsManagementAdd": false,
         "supportsManagementRemove": true,
         "supportsReenrollment": true,
         "supportsInventory": true,
@@ -34,105 +34,43 @@
       },
       "store_types": [
         {
-          "Name": "HPiLO",
+          "Name": "HP iLO Cert Store",
           "ShortName": "HPiLO",
           "Capability": "HPiLO",
           "LocalStore": false,
-          "StorePathDescription": "Path points to a local .json file. Orchestrator and its account should have read/write access.",
+          "StorePathDescription": "Path points to the HPiLO instance address, IP or domain name.",
           "ClientMachineDescription": "Runs on a Windows based machine.",
           "SupportedOperations": {
             "Add": true,
-            "Create": true,
-            "Discovery": true,
+            "Create": false,
+            "Discovery": false,
             "Enrollment": true,
             "Remove": true
           },
           "Properties": [
             {
-              "Name": "StoreNameString",
-              "DisplayName": "Store Name",
-              "Type": "String",
-              "Required": false,
-              "Description": "The Store name for the particular SOS store."
-            },
-            {
-              "Name": "ForTestingOnlyBool",
-              "DisplayName": "For Testing Only",
+              "Name": "InventoryAll",
+              "DisplayName": "InventoryAll",
               "Type": "Bool",
-              "DefaultValue": "true",
-              "Required": false,
-              "Description": "Test bool variable."
-            },
-            {
-              "Name": "CollectionNameMultipleChoice",
-              "DisplayName": "Collection Name",
-              "Type": "MultipleChoice",
-              "DefaultValue": "internal",
-              "Options": "internal,public,single use,ssl",
+              "DefaultValue": "false",
               "Required": true,
-              "Description": "A test collection."
+              "Description": "Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA`"
             },
             {
-              "Name": "PrivateDetailsSecret",
-              "DisplayName": "Private Details",
-              "Type": "Secret",
-              "Required": false,
-              "DefaultValue": "test",
-              "Description": "A test secret."
-            }
-          ],
-          "EntryParameters": [
-            {
-              "Name": "CommaSeparatedSansString",
-              "DisplayName": "SANs",
-              "Type": "String",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": false,
-                "OnRemove": false,
-                "OnReenrollment": false
-              },
-              "Description": "SAN string."
-            },
-            {
-              "Name": "CertColorMultipleChoice",
-              "DisplayName": "Certificate Color",
-              "Type": "MultipleChoice",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": false,
-                "OnRemove": false,
-                "OnReenrollment": false
-              },
-              "DefaultValue": "red",
-              "Options": "red,green,blue,orange",
-              "Description": "A test variable with multiple choice."
-            },
-            {
-              "Name": "ForTestingOnlyBool",
-              "DisplayName": "For Testing Only",
+              "Name": "IgnoreValidation",
+              "DisplayName": "IgnoreValidation",
               "Type": "Bool",
-              "RequiredWhen": {
-                "HasPrivateKey": true,
-                "OnAdd": false,
-                "OnRemove": false,
-                "OnReenrollment": false
-              },
               "DefaultValue": "true",
-              "Description": "Another test boolean."
+              "Required": true,
+              "Description": "WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint."
             },
             {
-              "Name": "PrivateCertDetailsSecret",
-              "DisplayName": "Private Cert Details",
-              "Type": "Secret",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": false,
-                "OnRemove": false,
-                "OnReenrollment": false
-              },
-              "DefaultValue": "test",
-              "Description": "A per cert secret."
+              "Name": "HTTPSCertWaitTime",
+              "DisplayName": "HTTPS Cert Wait Time",
+              "Type": "String",
+              "DefaultValue": "60",
+              "Required": true,
+              "Description": "The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted."
             }
           ],
           "PasswordOptions": {
@@ -143,8 +81,8 @@
           "PrivateKeyAllowed": "Optional",
           "ServerRequired": true,
           "PowerShell": false,
-          "BlueprintAllowed": true,
-          "CustomAliasAllowed": "Optional"
+          "BlueprintAllowed": false,
+          "CustomAliasAllowed": "Forbidden"
         }
       ]
     }

@@ -14,71 +14,66 @@
  *  limitations under the License.
  */
 
+#nullable enable
 using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
 {
-    //public class JobConfig
-    //{
-    //    public string ClientMachine { get; set; } // only defined for Discovery Jobs
-    //    public string StorePath { get; set; } // only null for Discovery Jobs
-    //    public string ServerUsername { get; set; }
-    //    public string ServerPassword { get; set; }
-    //    public string JobHistoryId { get; set; }
-    //    public DiscoveryJobProperties DiscoveryJobProperties { get; set; } // only populated for Discovery Jobs
-    //    public SampleStoreCustomProperties StoreProperties { get; set; } // collection of custom store properties defined on the store type in Command
-    //    public CertificateJobProperties CertificateJobProperties { get; set; }
-    //}
-
     public class HPiLOJobConfig
     {
-        public StoreDetails CertificateStoreDetails { get; set; }
+        public StoreDetails CertificateStoreDetails { get; set; } = new();
         public bool IgnoreValidation { get; set; }
         public CertStoreOperationType? OperationType { get; set; }
         public bool? Overwrite { get; set; }
-        public HPiLOJobCertificate JobCertificate { get; set; }
+        public HPiLOJobCertificate? JobCertificate { get; set; }
         public bool? JobCancelled { get; set; }
         public ServerFault? ServerError { get; set; }
         public long? JobHistoryId { get; set; }
         public int? RequestStatus { get; set; }
-        public string ServerUsername { get; set; }
-        public string ServerPassword { get; set; }
+        public string ServerUsername { get; set; } = string.Empty;
+        public string ServerPassword { get; set; } = string.Empty;
         public bool? UseSSL { get; set; }
-        public Dictionary<string, object> JobProperties { get; set; }
-        public string JobTypeId { get; set; }
-        public string JobId { get; set; }
-        public string Capability { get; set; }
+        public Dictionary<string, object> JobProperties { get; set; } = new();
+        public string JobTypeId { get; set; } = string.Empty;
+        public string JobId { get; set; } = string.Empty;
+        public string Capability { get; set; } = string.Empty;
     }
 
     public class StoreDetails
     {
+        public StoreDetails() { }
+
         public StoreDetails(CertificateStore storeDetails)
         {
             ClientMachine = storeDetails.ClientMachine;
             StorePath = storeDetails.StorePath;
             StorePassword = storeDetails.StorePassword;
-            Properties = JsonConvert.DeserializeObject<HPiLOCertStoreProperties>(storeDetails.Properties);
+            Properties = JsonConvert.DeserializeObject<HPiLOCertStoreProperties>(storeDetails.Properties) ??
+                         new HPiLOCertStoreProperties();
             Type = storeDetails.Type;
         }
 
-        public string ClientMachine { get; set; }
-        public string StorePath { get; set; }
-        public string StorePassword { get; set; }
-        public HPiLOCertStoreProperties Properties { get; set; }
+        public string ClientMachine { get; set; } = string.Empty;
+        public string StorePath { get; set; } = string.Empty;
+        public string StorePassword { get; set; } = string.Empty;
+        public HPiLOCertStoreProperties Properties { get; set; } = new();
         public int Type { get; set; }
     }
 
+    // HPiLOCertStoreProperties already has default values for all properties.
+
     public class HPiLOCertStoreProperties
     {
-        public string StoreNameString { get; set; }
-        public string ServerUsername { get; set; }
-        public string ServerPassword { get; set; }
-        public string IgnoreValidation { get; set; }
-        public string InventoryAll { get; set; }
-        public string HTTPSCertWaitTime { get; set; }
+        public string StoreNameString { get; set; } = string.Empty;
+        public string ServerUsername { get; set; } = string.Empty;
+        public string ServerPassword { get; set; } = string.Empty;
+        public string IgnoreValidation { get; set; } = string.Empty;
+        public string InventoryAll { get; set; } = string.Empty;
+        public string HTTPSCertWaitTime { get; set; } = string.Empty;
     }
 
     public class HPiLOJobCertificate
@@ -90,46 +85,15 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
             Contents = jobCertificate.Contents ?? string.Empty;
             Alias = jobCertificate.Alias ?? string.Empty;
             PrivateKeyPassword = jobCertificate.PrivateKeyPassword ?? string.Empty;
-            customEntryParameters.TryGetValue("CommaSeparatedSansString", out object commaSeparatedSansString);
-            CommaSeparatedSansString = commaSeparatedSansString?.ToString() ?? string.Empty;
-
-            customEntryParameters.TryGetValue("CertColorMultipleChoice", out object certColorMultipleChoice);
-            CertColorMultipleChoice = certColorMultipleChoice?.ToString() ?? string.Empty;
-            bool ForTestingOnlyBool;
-            if (customEntryParameters.TryGetValue("ForTestingOnlyBool", out object forTestingOnlyBoolValue) &&
-                bool.TryParse(forTestingOnlyBoolValue?.ToString(), out bool parsedBool))
-            {
-                ForTestingOnlyBool = parsedBool;
-            }
-            else
-            {
-                ForTestingOnlyBool = false;
-            }
-
-            customEntryParameters.TryGetValue("PrivateCertDetailsSecret", out object privateCertDetailsSecretValue);
-            PrivateCertDetailsSecret = privateCertDetailsSecretValue?.ToString() ?? string.Empty;
+            ContentsFormat = jobCertificate.ContentsFormat ?? string.Empty;
         }
 
-        public string Thumbprint { get; set; }
-        public string Contents { get; set; }
-        public string Alias { get; set; }
-        public string PrivateKeyPassword { get; set; }
+        public string Thumbprint { get; set; } = string.Empty;
+        public string Contents { get; set; } = string.Empty;
+        public string Alias { get; set; } = string.Empty;
+        public string PrivateKeyPassword { get; set; } = string.Empty;
+        public string ContentsFormat { get; set; } = string.Empty;
         public bool? Overwrite { get; set; }
-        public string CommaSeparatedSansString { get; set; }
-        public string CertColorMultipleChoice { get; set; }
-        public bool? ForTestingOnlyBool { get; set; }
-        public string PrivateCertDetailsSecret { get; set; }
-        public string SubjectText { get; set; }
-    }
-
-    public class DiscoveryJobProperties
-    {
-        // This class contains the Job Properties that are passed during a Discovery Job   
-
-        [JsonProperty("dirs")] public string Directories { get; set; }
-
-        [JsonProperty("ignoreddirs")] public string IgnoredDirectories { get; set; }
-
-        [JsonProperty("patterns")] public string RegexPatterns { get; set; }
+        public string SubjectText { get; set; } = string.Empty;
     }
 }

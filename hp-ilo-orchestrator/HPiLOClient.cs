@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright © 2024 Keyfactor
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,15 @@
  */
 
 using Keyfactor.Extensions.Orchestrator.HPiLO.Models;
+using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Security;
@@ -27,513 +31,644 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using static Keyfactor.PKI.PKIConstants.Microsoft;
+using System.Threading;
 
 namespace Keyfactor.Extensions.Orchestrator.HPiLO
 {
+    public class ClientOptions
+    {
+        public string BaseUrl { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public int HttpsCertWaitSeconds { get; set; }
+        public bool InventoryAll { get; set; } = false;
+    }
+
     public interface IHPiLOClient
     {
+        bool DeleteCertificate(iLOCertType csrType);
+        string GenerateCSR(string actionApiAddress, string distinguishedName, iLOCertType type, bool includeIP);
+        bool AddCertificate(string PemCert, iLOCertType certType);
+        iLOCertType CheckType(string input);
     }
 
     public class HPiLOClient : IHPiLOClient
     {
-        private readonly string _baseUrl;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly bool _ignorevalidation;
-        private readonly bool _inventoryall;
-        private readonly string _password;
-        private readonly string _username;
-        private readonly ILogger logger;
-        private readonly string _httpscertwaittime;
-        // The client is configured with the iLO base URL and credentials.
-        public HPiLOClient(IHttpClientFactory httpClientFactory, string baseUrl,
-            string username, string password, bool ignorevalidation, bool inventoryall, string waittime, ILogger inputlogger)
+        private readonly HttpClient _client;
+        private readonly ILogger _logger;
+        private readonly ClientOptions _opts;
+
+        public HPiLOClient(HttpClient client, IOptions<ClientOptions> options, ILogger logger)
         {
-            _httpClientFactory = httpClientFactory;
-            _baseUrl = baseUrl;
-            _username = username;
-            _password = password;
-            _ignorevalidation = ignorevalidation;
-            _inventoryall = inventoryall;
-            _httpscertwaittime = waittime;
-            logger = inputlogger;
+            _logger = logger;
+            _logger.LogTrace("Constructing HPiLOClient with BaseUrl={Url}, User={User}", options.Value.BaseUrl,
+                options.Value.Username);
+
+            _client = client;
+            _opts = options.Value;
+
+            // Base setup
+            _client.BaseAddress = new Uri(_opts.BaseUrl.TrimEnd('/'));
+            _client.DefaultRequestHeaders.Accept.Clear();
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            string basic = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_opts.Username}:{_opts.Password}"));
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
+
+            _logger.LogDebug("HTTP client configured: BaseAddress={BaseAddress}", _client.BaseAddress);
         }
 
-        // Sends a delete request to given endpoint
-        public bool DeleteCertificate(string alias)
+        /// <summary>
+        /// Determines what API Endpoint to hit based on the certificate type, used for both Reenrollment and Management Add.
+        /// </summary>
+        public bool AddCertificate(string PemCert, iLOCertType certType)
         {
-            // The endpoint for deleting the certificate
-            string deleteUrl = "null";
-            if (alias.IndexOf("iLOLDevID", StringComparison.OrdinalIgnoreCase) >= 0)
+            _logger.LogTrace("Entering DeleteCertificate: Type={Type}", certType);
+            string rel = certType switch
             {
-                int managerNum = ExtractManagerID(alias);
-                deleteUrl = "/redfish/v1/Managers/" + managerNum + "/SecurityService/iLOLDevID/";
-            }
-            else if (alias.IndexOf("HTTPSCert", StringComparison.OrdinalIgnoreCase) >= 0)
+                iLOCertType.iLOLDevID => APIEndpoints.ImportCertificateiLOLDevID,
+                iLOCertType.HTTPSCert => APIEndpoints.ImportCertificateHTTPSCert,
+                _ => throw new ArgumentException("Invalid Certificate type.")
+            };
 
+            if (certType == iLOCertType.HTTPSCert)
             {
-                deleteUrl = "/redfish/v1/managers/{item}/securityservice/httpscert/";
-            }
-            else
-            {
-                throw new Exception("Invalid alias");
-            }
-
-            using (HttpClient client = CreateClient())
-            {
-                HttpResponseMessage response = client.DeleteAsync(deleteUrl).GetAwaiter().GetResult();
-                // Optionally, you can inspect response.StatusCode or response.Content here.
-                if (response.IsSuccessStatusCode)
+                _logger.LogDebug("Importing HTTPS certificate with private key");
+                if (ImportCertificate(PemCert, rel, certType))
                 {
                     return true;
                 }
-
-                throw new Exception("Deletion failed.");
             }
-        }
-
-        // Retrieves the CSR, works for HTTPS cert and iLOLDevID certs
-        public string GenerateCSR(
-            string actionApiAddress,
-            string DN, CSRType type)
-        {
-            string jsonPayload = "";
-            if (type == CSRType.iLOLDevID)
+            else if (certType == iLOCertType.iLOLDevID)
             {
-                GenerateCsrRequestDevID requestObj = new()
+                _logger.LogDebug("Importing iLOLDevID certificate");
+                if (ImportCertificate(PemCert, rel, certType))
                 {
-                    CertificateCollection = new CertificateCollectionReference { ODataId = actionApiAddress }
-                };
-                jsonPayload = JsonConvert.SerializeObject(requestObj);
-            }
-            else if (type == CSRType.HTTPSCert)
-            {
-                GenerateCSRHTTPSCert requestObj = new();
-                requestObj = ParseSubjectText(DN);
-                jsonPayload = JsonConvert.SerializeObject(requestObj);
+                    return true;
+                }
             }
             else
             {
-                throw new Exception("Invalid CSR type");
+                throw new Exception("Reenrollment for this certificate is not supported by HP iLO.");
             }
 
-
-            using (HttpClient client = CreateClient())
-            {
-                HttpRequestMessage request = new(HttpMethod.Post, actionApiAddress)
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-
-                HttpResponseMessage response = client.SendAsync(request).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
-
-                string responseJson = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                if (type == CSRType.iLOLDevID)
-                {
-                    iLOCertificateInfo result = JsonConvert.DeserializeObject<iLOCertificateInfo>(responseJson);
-                    return result.CertificateString;
-                }
-
-                int waittime = 60;
-                int.TryParse(_httpscertwaittime, out waittime);
-                if (type == CSRType.HTTPSCert)
-                {
-                    // As per HP docs, we need to allow time for the CSR to be generated.
-                    Task.Delay(TimeSpan.FromSeconds(waittime)).Wait();
-                }
-                else
-                {
-                    throw new Exception("Invalid CSR type");
-                }
-            }
-
-            // Retrieve the generated CSR from the HTTPSCert endpoint in Manager 1.
-            string csrAddress = "/redfish/v1/Managers/1/SecurityService/HttpsCert/";
-            using (HttpClient client = CreateClient())
-            {
-                HttpResponseMessage response = client.GetAsync(csrAddress).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
-
-                string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-                // Deserialize the JSON into an iLOCertificateInfo object.
-                HpeHttpsCert certInfo = JsonConvert.DeserializeObject<HpeHttpsCert>(json);
-
-                // Return the CertificateString property (which should contain the CSR)
-                return certInfo?.CertificateSigningRequest ?? string.Empty;
-            }
+            return false;
         }
 
-        // Retrieves all available certificates from the SecurityService in each available manager. 
-        // First retrieves the https one, then proceeds to factory certs.
-        // Also retrieves the BIOS certs.
-        public List<CurrentInventoryItem> GetAllCertificates()
+        /// <summary>
+        /// Deletes a certificate from the iLO based on the provided certificate type.
+        /// </summary>
+        public bool DeleteCertificate(iLOCertType csrType)
         {
-            List<CurrentInventoryItem> processed_certificates = new();
-            // Retrieve the TLS Cert. There is only one per connection/iLO instance.
-            X509Certificate2 HTTPSCert = GetCertificate(_baseUrl);
-            CurrentInventoryItem TLSCert = new();
-            TLSCert.Alias = "HTTPSCert";
-            byte[] rawdata = HTTPSCert.RawData;
-            List<string> Cert = new();
-            Cert.Add(Convert.ToBase64String(rawdata));
-            TLSCert.Certificates = Cert;
-            processed_certificates.Add(TLSCert);
+            _logger.LogTrace("Entering DeleteCertificate: Type={Type}", csrType);
 
-            // Iterate over the number of managers and get all managers stored on the server. 
-            int managerNum = 0;
-            List<int> managers = new();
-            string urlManagers = "/redfish/v1/Managers/";
-            ManagerCollection managersCollection = GetSync<ManagerCollection>(urlManagers);
-            // For each manager
-            foreach (ManagerReference manager in managersCollection.Members)
+            string rel = csrType switch
             {
-                string managerPath = manager.OdataId;
-                // 1. Get the SecurityService resource (which contains links to certificates)
-                string url = managerPath + "SecurityService";
-                SecurityServiceResource secService =
-                    GetSync<SecurityServiceResource>(url);
-                // 2. Retrieve the ILoLDevID cert. This one enables user configured 802.1x access and should be inventoried regardless. Refer to iLO Docs.
-                int managerId = ExtractManagerID(manager.OdataId);
-                processed_certificates.AddRange(
-                    ProcessCert("Manager" + managerId + "/iLOLDevID", secService.iLOLDevID.Certificates));
-                // 3. If _fullinventory, retrieve and process all the baked-in certs, place them into a list. These are the baked in certificates we cant re-enroll.
-                if (_inventoryall)
-                {
-                    // TPM 2.0 Cert
-                    processed_certificates.AddRange(ProcessCert(managerId + "/PlatformCert",
-                        secService.PlatformCert.Certificates));
-                    // These are factory installed certs used for 802.1x authentication. Can only have one or the other.
-                    if (secService.iLOIDevID != null)
-                    {
-                        processed_certificates.AddRange(ProcessCert(managerId + "/iLOIDevID",
-                            secService.iLOIDevID.Certificates));
-                    }
-                    else
-                    {
-                        processed_certificates.AddRange(ProcessCert(managerId + "/BMCIDevIDPCA",
-                            secService.BMCIDevIDPCA.Certificates));
-                    }
-
-                    // Another TPM 2.0 cert
-                    processed_certificates.AddRange(ProcessCert(managerId + "/SystemIAK",
-                        secService.SystemIAK.Certificates));
-                }
-            }
-
-            /*
-            if (_inventoryall)
-            {
-                // Retrieve the BIOS HTTPS Certs.
-                SystemCollection systems = GetSync<SystemCollection>("/redfish/v1/Systems");
-                List<BiosCertificateInfo> biosCerts = new();
-                if (systems.Members != null)
-                {
-                    foreach (SystemReference systemRef in systems.Members)
-                    {
-                        if (!string.IsNullOrEmpty(systemRef.OdataId))
-                        {
-                            // Construct the URL for the BIOS TLS configuration for this system.
-                            string biosCertUrl = systemRef.OdataId.TrimEnd('/') + "/bios/tlsconfig/";
-
-                            // Retrieve the BIOS certificate information.
-                            BiosCertificateInfo certInfo = GetSync<BiosCertificateInfo>(biosCertUrl);
-                            biosCerts.Add(certInfo);
-                        }
-                    }
-                }
-
-                // Process the BIOS HTTPS Certs.
-                foreach (BiosCertificateInfo biosCertificateInfo in biosCerts)
-                {
-                    CurrentInventoryItem newCert = new();
-                    newCert.Alias = "Boot TLS Certificate";
-                    List<string> tempList = new();
-                    tempList.Add(biosCertificateInfo.CertificateString);
-                    newCert.Certificates = tempList;
-                    processed_certificates.Add(newCert);
-                }
-            }
-            */
-            return processed_certificates;
-        }
-
-        // Extracts the manager ID from the OData ID.
-        private int ExtractManagerID(string input)
-        {
-            // Pattern: look for "/Managers/" followed by one or more digits, optionally followed by a trailing slash.
-            Regex regex = new(@"/redfish/v1/Managers/(\d+)/?");
-            Match match = regex.Match(input);
-            if (match.Success)
-            {
-                string idStr = match.Groups[1].Value;
-                return int.Parse(idStr);
-            }
-
-            Console.WriteLine("ID not found.");
-            return 0;
-        }
-
-        // Converts a cert retrieved from the endpoint to a CurrentInventoryItem
-        private List<CurrentInventoryItem> ProcessCert(string alias, ODataIdRef certaddress)
-        {
-            List<CurrentInventoryItem> processedCerts = new();
-            List<iLOCertificateInfo> unprocessedCerts = retrieveCert(certaddress.ODataId);
-            foreach (iLOCertificateInfo unprocessedCert in unprocessedCerts)
-            {
-                CurrentInventoryItem processedCert = new();
-                List<string> Cert = new();
-                Cert.Add(unprocessedCert.CertificateString);
-                processedCert.Certificates = Cert;
-                processedCert.Alias = alias;
-                processedCerts.Add(processedCert);
-            }
-
-            return processedCerts;
-        }
-
-        // Retrieve cert from endpoint, works for all certs except TLS
-        private List<iLOCertificateInfo> retrieveCert(string certlink)
-        {
-            List<iLOCertificateInfo> returnedCerts = new();
-            if (!string.IsNullOrEmpty(certlink))
-            {
-                // Fetch the collection of certificates (which may contain multiple entries)
-                CertificateCollection collection = GetSync<CertificateCollection>(certlink);
-                if (collection.Members != null)
-                {
-                    foreach (ODataIdRef certRef in collection.Members)
-                    {
-                        // Fetch each certificate in the collection
-                        if (!string.IsNullOrEmpty(certRef.ODataId))
-                        {
-                            iLOCertificateInfo cert = GetSync<iLOCertificateInfo>(certRef.ODataId);
-                            returnedCerts.Add(cert);
-                        }
-                    }
-
-                    return returnedCerts;
-                }
-            }
-
-            return returnedCerts;
-        }
-
-        public bool ImportCertificate(string certificate, string endpoint, CSRType certType)
-        {
-            // Build the payload with the certificate string.
-            string jsonPayload = "";
-
-            if (certType == CSRType.HTTPSCert)
-            {
-                var payload = new { Certificate = certificate };
-                jsonPayload = JsonConvert.SerializeObject(payload);
-            }
-            else if (certType == CSRType.iLOLDevID)
-            {
-                ImportCertificateiLOLDevID payload = new();
-                payload.CertificateString = certificate;
-                payload.CertificateType = "PEM";
-                jsonPayload = JsonConvert.SerializeObject(payload);
-            }
-            else
-            {
-                throw new Exception("Invalid CSR type");
-            }
-
-            using (HttpClient client = CreateClient())
-            {
-                // Create a POST request.
-                HttpRequestMessage request = new(new HttpMethod("POST"), endpoint)
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-
-                // Send the request synchronously.
-                HttpResponseMessage response = client.SendAsync(request).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
-                return response.IsSuccessStatusCode;
-            }
-        }
-
-        // Create an HttpClient that optionally bypasses certificate errors.
-        private HttpClient CreateClient()
-        {
-            HttpClient client;
-            if (!_ignorevalidation)
-            {
-                client = _httpClientFactory.CreateClient();
-            }
-            else
-            {
-                // Create a custom handler that bypasses certificate errors.
-                HttpClientHandler handler = new();
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, certificate, chain, sslPolicyErrors) =>
-                    {
-                        // Bypass specific errors such as name mismatch and chain errors.
-                        if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
-                            sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateChainErrors) ||
-                            sslPolicyErrors != SslPolicyErrors.None)
-                        {
-                            return true;
-                        }
-
-                        return true;
-                    };
-
-                client = new HttpClient(handler);
-            }
-
-            client.BaseAddress = new Uri(_baseUrl);
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            string authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_username}:{_password}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authToken);
-
-            return client;
-        }
-
-        // Synchronously performs a GET request and deserializes the JSON response to type T.
-        private T GetSync<T>(string relativeUrl)
-        {
-            using (HttpClient client = CreateClient())
-            {
-                HttpResponseMessage response = client.GetAsync(relativeUrl).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
-                string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                return JsonConvert.DeserializeObject<T>(json);
-            }
-        }
-
-        //  Connects to the specified host and port to retrieve its TLS certificate.
-        //  Retries the operation up to MaxRetries in case of failure.
-        //  Returns the certificate as an X509Certificate2.
-        public static X509Certificate2 GetCertificate(string host_entry, int port = 443)
-        {
-            string host = StripScheme(host_entry);
-            using (TcpClient client = new(host, port))
-            {
-                using (SslStream sslStream = new(
-                           client.GetStream(),
-                           false,
-                           ValidateServerCertificate,
-                           null))
-                {
-                    // Initiate the SSL handshake.
-                    sslStream.AuthenticateAsClient(host);
-
-                    // Extract the remote certificate.
-                    X509Certificate remoteCertificate = sslStream.RemoteCertificate;
-                    if (remoteCertificate == null)
-                    {
-                        throw new Exception("No certificate was provided by the remote server.");
-                    }
-
-                    return new X509Certificate2(remoteCertificate);
-                }
-            }
-        }
-
-
-        // Parses subject text.
-        public static GenerateCSRHTTPSCert ParseSubjectText(string distinguishedName)
-        {
-            // Create an instance with default values.
-            GenerateCSRHTTPSCert requestBody = new()
-            {
-                IncludeIP = false // default value if not provided
+                iLOCertType.iLOLDevID => APIEndpoints.DeleteCertificateiLOLDevID,
+                iLOCertType.HTTPSCert => APIEndpoints.DeleteCertificateHTTPSCert,
+                _ => throw new ArgumentException(
+                    "Invalid cert type. Only deletion of iLOLDevID and HTTPSCert is supported.")
             };
 
-            if (string.IsNullOrWhiteSpace(distinguishedName))
+            Uri uri = BuildUri(rel);
+            _logger.LogDebug("DELETE request URI: {Uri}", uri);
+            HttpRequestMessage request = new(HttpMethod.Delete, uri);
+
+            HttpResponseMessage resp = _client.Send(request, HttpCompletionOption.ResponseHeadersRead);
+            _logger.LogDebug("Received response: Status={StatusCode}", resp.StatusCode);
+
+            if (resp.IsSuccessStatusCode)
             {
-                return requestBody;
+                _logger.LogInformation("Successfully deleted certificate: {Type}", csrType);
+                return true;
             }
 
-            // Split by commas (DN parts are separated by commas)
-            string[] parts = distinguishedName.Split(',');
-
-            foreach (string part in parts)
-            {
-                // Trim whitespace and split key/value by '='.
-                string trimmedPart = part.Trim();
-                if (string.IsNullOrWhiteSpace(trimmedPart))
-                {
-                    continue;
-                }
-
-                // Use a split limit of 2 in case the value contains '='.
-                string[] keyValue = trimmedPart.Split(new[] { '=' }, 2);
-                if (keyValue.Length != 2)
-                {
-                    continue;
-                }
-
-                string key = keyValue[0].Trim();
-                string value = keyValue[1].Trim();
-
-                // Map DN attributes to our request body properties.
-                switch (key.ToUpperInvariant())
-                {
-                    case "C":
-                        requestBody.Country = value;
-                        break;
-                    case "ST":
-                        requestBody.State = value;
-                        break;
-                    case "L":
-                        requestBody.City = value;
-                        break;
-                    case "O":
-                        requestBody.OrgName = value;
-                        break;
-                    case "OU":
-                        requestBody.OrgUnit = value;
-                        break;
-                    case "CN":
-                        requestBody.CommonName = value;
-                        break;
-                    case "INCLUDEIP":
-                    case "IP": // Optionally, allow "IP" as an alias.
-                        if (bool.TryParse(value, out bool includeIp))
-                        {
-                            requestBody.IncludeIP = includeIp;
-                        }
-
-                        break;
-                }
-            }
-
-            return requestBody;
+            _logger.LogError("Deletion failed: Status={Status}", resp.StatusCode);
+            throw new HttpRequestException($"Deletion failed: {resp.StatusCode}");
         }
 
-
-        // A simple certificate validation callback that accepts all certificates.
-        private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain,
-            SslPolicyErrors sslPolicyErrors)
+        /// <summary>
+        /// Handles CSR generation for both iLOLDevID and HTTPSCert types for reenrollment.
+        /// </summary>
+        public string GenerateCSR(string actionApiAddress, string distinguishedName, iLOCertType type, bool includeIP)
         {
+            _logger.LogTrace("Entering GenerateCSR: Action={Action}, DN={DN}, Type={Type}", actionApiAddress,
+                distinguishedName, type);
+
+            string payload = type switch
+            {
+                iLOCertType.iLOLDevID => JsonConvert.SerializeObject(new GenerateCsrRequestDevID
+                {
+                    CertificateCollection = new CertificateCollectionReference
+                    {
+                        ODataId = APIEndpoints.ImportCertificateiLOLDevID
+                    }
+                }),
+                iLOCertType.HTTPSCert => JsonConvert.SerializeObject(ParseSubjectText(distinguishedName, includeIP)),
+                _ => throw new ArgumentException("Invalid CSR type")
+            };
+
+            _logger.LogDebug("CSR payload: {Payload}", payload);
+            HttpRequestMessage req = new(HttpMethod.Post, new Uri(actionApiAddress, UriKind.RelativeOrAbsolute))
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+
+            _logger.LogDebug("POST request URI: {Uri}", req.RequestUri);
+            HttpResponseMessage resp = _client.Send(req, HttpCompletionOption.ResponseHeadersRead);
+            _logger.LogDebug("Received response: Status={StatusCode}", resp.StatusCode);
+            resp.EnsureSuccessStatusCode();
+            string json1;
+            using (Stream stream = resp.Content.ReadAsStream())
+            using (StreamReader reader = new(stream, Encoding.UTF8))
+            {
+                json1 = reader.ReadToEnd();
+            }
+
+            _logger.LogTrace("CSR response payload length: {Length}", json1.Length);
+
+            if (type == iLOCertType.HTTPSCert && _opts.HttpsCertWaitSeconds > 0)
+            {
+                _logger.LogDebug("Waiting {Seconds}s for HTTPS CSR re-enrollment", _opts.HttpsCertWaitSeconds);
+                Thread.Sleep(_opts.HttpsCertWaitSeconds * 1000);
+            }
+
+            if (type == iLOCertType.HTTPSCert)
+            {
+                // Retrieve the generated CSR from the HTTPSCert endpoint in Manager 1.
+                string csrAddress = "/redfish/v1/Managers/1/SecurityService/HttpsCert/";
+                HttpRequestMessage req2 = new(HttpMethod.Get, csrAddress);
+                HttpResponseMessage responseHTTPSCsr = _client.Send(req2, HttpCompletionOption.ResponseHeadersRead);
+                resp.EnsureSuccessStatusCode();
+
+                string json2;
+                using (Stream stream = responseHTTPSCsr.Content.ReadAsStream())
+                using (StreamReader reader = new(stream, Encoding.UTF8))
+                {
+                    json2 = reader.ReadToEnd();
+                }
+
+                // Deserialize the JSON into an HpeHttpsCert object.
+                HpeHttpsCert certInfo = JsonConvert.DeserializeObject<HpeHttpsCert>(json2);
+
+                // Return the HTTPSCert CSR 
+                return certInfo?.CertificateSigningRequest ?? string.Empty;
+            }
+
+            //Return iLOLDevID CSR string
+            string result = JsonConvert.DeserializeObject<iLOLDevCSR>(json1)!.CSRString;
+            _logger.LogInformation("Generated CSR successfully for Type={Type}", type);
+            return result;
+        }
+
+        /// <summary>
+        /// Retrieves all certificates from the iLO, including HTTPSCert and iLOLDevID.
+        /// </summary>
+        public List<CurrentInventoryItem> GetAllCertificates()
+        {
+            _logger.LogTrace("Entering GetAllCertificates");
+            _logger.LogDebug("Retrieving TLS certificate from BaseAddress={Base}", _client.BaseAddress);
+            Dictionary<string, object> Paramaters = new() { { "CertificateType", "HTTPSCert" } };
+            //This retrieves the TLS certificate chain from the iLO's BaseAddress. There is no way to inventory it 
+            //through the Redfish API, so we do it manually.
+            List<X509Certificate2> certs = GetCertificateChain(_client.BaseAddress!.ToString());
+            List<CurrentInventoryItem> items = new()
+            {
+                new CurrentInventoryItem
+                {
+                    Alias = "HTTPSCert",
+                    Certificates = ExportToPem(certs),
+                    ItemStatus = OrchestratorInventoryItemStatus.Unknown,
+                    PrivateKeyEntry = false,
+                    UseChainLevel = true,
+                    Parameters = Paramaters
+                }
+            };
+            //All the other certificates are retrieved through the Redfish API and can be iterated through per manager.
+            ManagerCollection mgrColl = GetSync<ManagerCollection>(APIEndpoints.ManagersCollection);
+            foreach (ManagerReference mgr in mgrColl.Members!)
+            {
+                int id = ExtractManagerID(mgr.OdataId);
+                _logger.LogDebug("Processing Manager ID={Id}", id);
+
+                SecurityServiceResource sec = GetSync<SecurityServiceResource>($"{mgr.OdataId}SecurityService");
+                items.AddRange(ProcessCert($"{id}/iLOLDevID", sec.iLOLDevID.Certificates));
+
+
+                if (_opts.InventoryAll)
+                {
+                    items.AddRange(ProcessCert($"{id}/PlatformCert", sec.PlatformCert.Certificates));
+                    items.AddRange(ProcessCert(
+                        $"{id}/iLOIDevID" + (sec.iLOIDevID != null ? string.Empty : "/BMCIDevIDPCA"),
+                        sec.iLOIDevID?.Certificates ?? sec.BMCIDevIDPCA.Certificates));
+                    items.AddRange(ProcessCert($"{id}/SystemIAK", sec.SystemIAK.Certificates));
+                }
+            }
+
+
+            _logger.LogInformation("Total certificates retrieved: {Count}", items.Count);
+            return items;
+        }
+
+        /// <summary>
+        /// Submits a certificate to iLO.
+        /// </summary>
+        public bool ImportCertificate(string certificate, string endpoint, iLOCertType certType)
+        {
+            _logger.LogTrace("Entering ImportCertificate: Endpoint={End}, Type={Type}", endpoint, certType);
+
+            object body = certType switch
+            {
+                iLOCertType.HTTPSCert => new { Certificate = certificate },
+                iLOCertType.iLOLDevID => new ImportCertificateiLOLDevID
+                {
+                    CertificateString = certificate, CertificateType = "PEM"
+                },
+                _ => throw new ArgumentException("Invalid CSR type")
+            };
+
+            string jsonBody = JsonConvert.SerializeObject(body);
+            _logger.LogDebug("Import payload: {Payload}", jsonBody);
+            HttpRequestMessage req = new(HttpMethod.Post, new Uri(endpoint, UriKind.RelativeOrAbsolute))
+            {
+                Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+            };
+
+            _logger.LogDebug("POST import request URI: {Uri}", req.RequestUri);
+            HttpResponseMessage resp = _client.Send(req, HttpCompletionOption.ResponseHeadersRead);
+            _logger.LogDebug("Received import response: Status={StatusCode}", resp.StatusCode);
+            resp.EnsureSuccessStatusCode();
+
+            _logger.LogInformation("Imported certificate successfully: Type={Type}", certType);
+
+
             return true;
         }
 
-        // Strip ip
-        public static string StripScheme(string url)
+        /// <summary>
+        /// Simple string parser to determine the enum certificate type.
+        /// </summary>
+        public iLOCertType CheckType(string input)
         {
-            if (Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            Dictionary<string, iLOCertType> typeMappings = new()
             {
-                return uri.Host;
+                { "iLOLDevID", iLOCertType.iLOLDevID },
+                { "HTTPSCert", iLOCertType.HTTPSCert },
+                { "PlatformCert", iLOCertType.PlatformCert },
+                { "iLOIDevID", iLOCertType.iLOIDevID },
+                { "BMCIDevIDPCA", iLOCertType.BMCIDevIDPCA },
+                { "SystemIAK", iLOCertType.SystemIAK }
+            };
+
+            foreach (KeyValuePair<string, iLOCertType> mapping in typeMappings)
+            {
+                if (input.Contains(mapping.Key))
+                {
+                    return mapping.Value;
+                }
             }
 
-            // Fallback for non-standard inputs: manually remove "https://" if present.
-            const string httpsPrefix = "https://";
-            if (url.StartsWith(httpsPrefix, StringComparison.OrdinalIgnoreCase))
+            _logger.LogError("Unknown CSR type for input: {Input}", input);
+            throw new ArgumentException("Unknown CSR type");
+        }
+
+        /// <summary>
+        /// Concatenates a relative path with the base URI to build a full URI.
+        /// </summary>
+        private Uri BuildUri(string relativePath)
+        {
+            _logger.LogTrace("Building URI from relative path: {Path}", relativePath);
+            UriBuilder builder = new(_client.BaseAddress!)
             {
-                return url.Substring(httpsPrefix.Length);
+                Path = $"{_client.BaseAddress.AbsolutePath.TrimEnd('/')}/{relativePath.TrimStart('/')}"
+            };
+            Uri uri = builder.Uri;
+            _logger.LogDebug("Built URI: {Uri}", uri);
+            return uri;
+        }
+
+        /// <summary>
+        /// Wrapper for all GET requests to the Redfish API. Contains retry logic.
+        /// </summary>
+        private T GetSync<T>(string relativePath, int maxRetries = 3)
+        {
+            _logger.LogTrace("Entering GetSync<{Type}>: Path={Path}", typeof(T).Name, relativePath);
+            Uri uri = BuildUri(relativePath);
+            Exception lastEx = null;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    HttpRequestMessage request = new(HttpMethod.Get, uri);
+                    _logger.LogDebug("GET request URI: {Uri}", uri);
+
+                    HttpResponseMessage resp = _client.Send(request, HttpCompletionOption.ResponseHeadersRead);
+                    _logger.LogDebug("Received GET response: Status={StatusCode}", resp.StatusCode);
+                    resp.EnsureSuccessStatusCode();
+
+                    string json;
+                    using (Stream stream = resp.Content.ReadAsStreamAsync().GetAwaiter().GetResult())
+                    using (StreamReader reader = new(stream, Encoding.UTF8))
+                    {
+                        json = reader.ReadToEnd();
+                    }
+
+                    _logger.LogTrace("GET response payload length: {Length}", json.Length);
+
+                    return JsonConvert.DeserializeObject<T>(json)!;
+                }
+                catch (Exception ex)
+                {
+                    lastEx = ex;
+                    _logger.LogWarning(ex, "Attempt {Attempt} to retrieve data from {Path} failed.", attempt,
+                        relativePath);
+                    if (attempt < maxRetries)
+                    {
+                        Thread.Sleep(60000); // Delay before retrying
+                    }
+                }
+            }
+
+            _logger.LogError(lastEx, "Failed to retrieve data from {Path} after {MaxRetries} attempts.", relativePath,
+                maxRetries);
+            throw new InvalidOperationException(
+                $"Could not retrieve data from {relativePath} after {maxRetries} tries.", lastEx);
+        }
+
+        /// <summary>
+        /// Extracts the Manager ID from a Redfish path.
+        /// </summary>
+        private int ExtractManagerID(string path)
+        {
+            _logger.LogTrace("Extracting Manager ID from path: {Path}", path);
+            Match match = Regex.Match(path, @"/redfish/v1/Managers/(\d+)/?");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int id))
+            {
+                _logger.LogDebug("Extracted Manager ID: {Id}", id);
+                return id;
+            }
+
+            _logger.LogWarning("Manager ID not found in path '{Path}'", path);
+            return 0;
+        }
+
+        /// <summary>
+        /// Prepares a certificate retrieved from Redfish into a Keyfactor-supported format.
+        /// </summary>
+        private List<CurrentInventoryItem> ProcessCert(string alias, ODataIdRef certRef)
+        {
+            _logger.LogTrace("Processing certificates for alias: {Alias}", alias);
+            List<iLOCertificateInfo> infos = RetrieveCert(certRef.ODataId);
+            _logger.LogDebug("Retrieved {Count} cert infos for alias {Alias}", infos.Count, alias);
+            Dictionary<string, object> Paramaters = new() { { "CertificateType", GetCertificateTypeFromAlias(alias) } };
+            return infos.Select(info => new CurrentInventoryItem
+            {
+                Alias = alias,
+                Certificates =
+                    ExtractCertificates(info.CertificateString?.Replace("\r", "").Replace("\n", "") ??
+                                        string.Empty),
+                ItemStatus = OrchestratorInventoryItemStatus.Unknown,
+                UseChainLevel = true,
+                PrivateKeyEntry = false,
+                Parameters = Paramaters
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Extracts PEM-encoded certificates from a PEM blob, ignoring any other content and returning a chain in a list.
+        /// </summary>
+        public static List<string> ExtractCertificates(string pemBlob)
+        {
+            if (pemBlob is null)
+            {
+                throw new ArgumentNullException(nameof(pemBlob));
+            }
+
+            List<string> certList = new();
+
+            // Regex to match exactly the CERTIFICATE blocks, non-greedy
+            Regex certRegex = new(
+                "-----BEGIN CERTIFICATE-----(?<body>.*?)-----END CERTIFICATE-----",
+                RegexOptions.Singleline | RegexOptions.Compiled);
+
+            foreach (Match match in certRegex.Matches(pemBlob))
+            {
+                // match.Value includes both the BEGIN/END lines and everything in between
+                certList.Add(match.Value);
+            }
+
+            return certList;
+        }
+
+        /// <summary>
+        /// Basic function to handle parsing cert type from alias.
+        /// </summary>
+        private static string GetCertificateTypeFromAlias(string alias)
+        {
+            return alias.Split('/').Last();
+        }
+
+        /// <summary>
+        /// Retrieves certificates from the Redfish API using the provided link.
+        /// </summary>
+        private List<iLOCertificateInfo> RetrieveCert(string certLink)
+        {
+            _logger.LogTrace("Entering RetrieveCert: Link={Link}", certLink);
+            if (string.IsNullOrEmpty(certLink))
+            {
+                _logger.LogDebug("No cert link provided, returning empty list.");
+                return new List<iLOCertificateInfo>();
+            }
+
+            CertificateCollection coll = GetSync<CertificateCollection>(certLink);
+            List<iLOCertificateInfo> list = new();
+            if (coll.Members != null)
+            {
+                foreach (ODataIdRef member in coll.Members)
+                {
+                    _logger.LogDebug("Retrieving member cert at ODataId={ODataId}", member.ODataId);
+                    if (!string.IsNullOrEmpty(member.ODataId))
+                    {
+                        list.Add(GetSync<iLOCertificateInfo>(member.ODataId));
+                    }
+                }
+            }
+
+            _logger.LogDebug("Total certificates retrieved from link: {Count}", list.Count);
+            return list;
+        }
+
+        /// <summary>
+        /// Manually retrieves the TLS certificate chain from the iLO host.
+        /// </summary>
+        public List<X509Certificate2> GetCertificateChain(string hostEntry, int port = 443, int maxRetries = 3)
+        {
+            Exception lastEx = null;
+            string host = StripScheme(hostEntry);
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    // 1) Establish TCP + TLS, grab the leaf cert
+                    using TcpClient tcp = new(host, port);
+                    using SslStream ssl = new(
+                        tcp.GetStream(),
+                        false,
+                        (s, cert, chain, errors) => true,
+                        null
+                    );
+                    ssl.AuthenticateAsClient(host);
+
+                    X509Certificate2 leafCert = ssl.RemoteCertificate is X509Certificate2 c2
+                        ? c2
+                        : new X509Certificate2(ssl.RemoteCertificate);
+
+                    // 2) Now build the full chain from that leaf
+                    X509Chain chain = new()
+                    {
+                        // tweak policy so intermediates are fetched from AIA if needed
+                        ChainPolicy =
+                        {
+                            RevocationMode = X509RevocationMode.NoCheck,
+                            VerificationFlags = X509VerificationFlags.IgnoreWrongUsage,
+                            UrlRetrievalTimeout = TimeSpan.FromSeconds(5)
+                        }
+                    };
+
+                    bool built = chain.Build(leafCert);
+
+                    // 3) Always include at least the leaf
+                    List<X509Certificate2> certs = new() { leafCert };
+
+                    if (built && chain.ChainElements.Count > 1)
+                    {
+                        // skip element 0 (the leaf we already have)
+                        certs.AddRange(chain.ChainElements
+                            .Skip(1)
+                            .Select(e => new X509Certificate2(e.Certificate)));
+                    }
+
+                    return certs;
+                }
+                catch (Exception ex)
+                {
+                    lastEx = ex;
+                    _logger.LogWarning(ex,
+                        "Attempt {Attempt} to retrieve cert chain failed. (Could be waiting for reboot after HTTPSCert reenrollment/ODKG?)",
+                        attempt);
+                    Thread.Sleep(60000);
+                }
+            }
+
+            _logger.LogError(lastEx, "Failed to retrieve certificate chain after {MaxRetries} attempts.", maxRetries);
+            throw new InvalidOperationException(
+                $"Could not retrieve cert chain from {host}:{port} after {maxRetries} tries.",
+                lastEx);
+        }
+
+        /// <summary>
+        /// Parses the distinguished name and IP inclusion flag into a GenerateCSRHTTPSCert object.
+        /// </summary>
+        public static GenerateCSRHTTPSCert ParseSubjectText(string distinguishedName, bool includeIP)
+        {
+            GenerateCSRHTTPSCert req = new() { IncludeIP = includeIP };
+            if (string.IsNullOrWhiteSpace(distinguishedName))
+            {
+                return req;
+            }
+
+            foreach (string part in distinguishedName.Split(','))
+            {
+                string[] kv = part.Split('=', 2);
+                if (kv.Length != 2)
+                {
+                    continue;
+                }
+
+                string key = kv[0].Trim().ToUpperInvariant();
+                string val = kv[1].Trim();
+
+                switch (key)
+                {
+                    case "C": req.Country = val; break;
+                    case "ST": req.State = val; break;
+                    case "L": req.City = val; break;
+                    case "O": req.OrgName = val; break;
+                    case "OU": req.OrgUnit = val; break;
+                    case "CN": req.CommonName = val; break;
+                    case "INCLUDEIP":
+                    case "IP":
+                        if (bool.TryParse(val, out bool incl))
+                        {
+                            req.IncludeIP = incl;
+                        }
+
+                        break;
+                }
+            }
+
+            return req;
+        }
+
+        /// <summary>
+        /// Strips the scheme (http/https) from a URL.
+        /// </summary>
+        private static string StripScheme(string url)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out Uri u))
+            {
+                return u.Host;
+            }
+
+            const string https = "https://";
+            const string http = "http://";
+            if (url.StartsWith(https, StringComparison.OrdinalIgnoreCase))
+            {
+                return url.Substring(https.Length);
+            }
+
+            if (url.StartsWith(http, StringComparison.OrdinalIgnoreCase))
+            {
+                return url.Substring(http.Length);
             }
 
             return url;
+        }
+
+        /// <summary>
+        /// Processes the manually retrieved TLS certificates into PEM format for Keyfactor.
+        /// </summary>
+        private static string[] ExportToPem(IEnumerable<X509Certificate2> certificates)
+        {
+            if (certificates == null)
+            {
+                throw new ArgumentNullException(nameof(certificates));
+            }
+
+            // Materialize the list so we can check for null elements
+            IList<X509Certificate2> certList = certificates as IList<X509Certificate2> ?? certificates.ToList();
+
+            if (certList.Any(c => c == null))
+            {
+                throw new ArgumentException("Certificate collection contains a null element.", nameof(certificates));
+            }
+
+            return certList
+                .Select(cert =>
+                {
+                    // Export the certificate in DER format
+                    byte[] certBytes = cert.Export(X509ContentType.Cert);
+
+                    // Build the PEM block
+                    StringBuilder sb = new();
+                    sb.AppendLine("-----BEGIN CERTIFICATE-----");
+                    sb.AppendLine(Convert.ToBase64String(certBytes, Base64FormattingOptions.InsertLineBreaks));
+                    sb.AppendLine("-----END CERTIFICATE-----");
+
+                    return sb.ToString();
+                })
+                .ToArray();
         }
     }
 }

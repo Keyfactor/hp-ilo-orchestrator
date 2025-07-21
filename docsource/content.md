@@ -1,10 +1,12 @@
+﻿# HP iLO Orchestrator Extension
+
 ## Overview
 
-The HPiLO orchestrator extension allows for management certificates on HP Integrated Lights-Out (iLO) remote 
-server management technology embedded in HPE servers. 
+This is an HP iLO orchestrator extension.
+### ⚠️ Important Notice
+**Cert Store Type has been changed from version 1.0. Please update existing stores to include the new entry parameters, enable Add job functionality and make sure the default values for custom fields and entry paremeters align, then run an inventory job afterwards. Please see Changelog for the full list of many changes. See store type documentation below for reference.**
 
 ## Requirements
 
-The account the Universal Orchestrator is running under needs to have read/write access to the .json file.
-
-This orchestrator extension was written to work with HP iLO 6.
+- **Target Platform:** HP iLO 6  
+- **Tested HPiLO Firmware Versions:** 1.58 and 1.69

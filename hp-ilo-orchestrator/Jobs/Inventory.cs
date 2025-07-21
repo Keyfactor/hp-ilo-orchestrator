@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+using Keyfactor.Extensions.Orchestrator.HPiLO.Models;
+using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,7 +50,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             //   }
             // }            
 
-            Initialize(config);
+            InventoryInitialize(config);
             logger.LogDebug("Begin Inventory...");
 
             //List<CurrentInventoryItem> is the collection that the interface expects to return from this job.
@@ -65,7 +67,12 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                 HPiLOClient APIclient = APIService.GetRequiredService<HPiLOClient>();
                 List<CurrentInventoryItem> inventoryItems =
                     APIclient.GetAllCertificates();
-                submitInventory.Invoke(inventoryItems);
+                bool result = submitInventory.Invoke(inventoryItems);
+                if (!result)
+                {
+                    throw new Exception("Failed to submit certificates to Command.");
+                }
+
                 inventoryResult.Result = OrchestratorJobStatusJobResult.Success;
                 inventoryResult.FailureMessage = $"Successfully inventoried {inventoryItems.Count} certificates";
             }
@@ -77,6 +84,43 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             }
 
             return inventoryResult;
+        }
+
+        protected void InventoryInitialize(InventoryJobConfiguration config)
+        {
+            JobConfig = new HPiLOJobConfig();
+            logger = LogHandler.GetClassLogger(GetType());
+            logger.MethodEntry();
+            try
+            {
+                if (config.CertificateStoreDetails == null)
+                {
+                    throw new MissingFieldException(
+                        "No value for CertificateStoreDetails for non-Discovery job.");
+                }
+
+                JobConfig.CertificateStoreDetails = new StoreDetails(config.CertificateStoreDetails);
+                // resolve secrets using the PAM settings configured on the orchestrator (if any)
+                // if PAM is not configured, the resolved values will be the ones passed by the orchestrator, rather than looked up via PAM provider extension.
+                if (config.ServerUsername != null)
+                {
+                    JobConfig.ServerUsername = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server UserName",
+                        config.ServerUsername);
+                }
+
+                if (config.ServerPassword != null)
+                {
+                    JobConfig.ServerPassword = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server Password",
+                        config.ServerPassword);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error evaluating the job parameters: {ex.Message}");
+                throw;
+            }
+
+            InitializeHttpClient(JobConfig);
         }
     }
 }

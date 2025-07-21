@@ -11,12 +11,12 @@
   "release_dir": "hp-ilo-orchestrator/bin/Release",
   "about": {
     "orchestrator": {
-      "UOFramework": "24.4",
+      "UOFramework": "25.2",
       "keyfactor_platform_version": "24.4",
       "pam_support": true,
       "win": {
         "supportsCreateStore": false,
-        "supportsDiscovery": true,
+        "supportsDiscovery": false,
         "supportsManagementAdd": false,
         "supportsManagementRemove": true,
         "supportsReenrollment": true,
@@ -25,7 +25,7 @@
       },
       "linux": {
         "supportsCreateStore": false,
-        "supportsDiscovery": true,
+        "supportsDiscovery": false,
         "supportsManagementAdd": false,
         "supportsManagementRemove": true,
         "supportsReenrollment": true,
@@ -38,8 +38,8 @@
           "ShortName": "HPiLO",
           "Capability": "HPiLO",
           "LocalStore": false,
-          "StorePathDescription": "Path points to the HPiLO instance address, IP or domain name.",
-          "ClientMachineDescription": "Runs on a Windows based machine.",
+          "StorePathDescription": "This should contain the path pointsing to the HPiLO instance address, IP or domain name.",
+          "ClientMachineDescription": "Should contain a copy of the store path for compatibility reasons but is currently unused.",
           "SupportedOperations": {
             "Add": true,
             "Create": false,
@@ -52,25 +52,59 @@
               "Name": "InventoryAll",
               "DisplayName": "InventoryAll",
               "Type": "Bool",
+              "DependsOn": null,
               "DefaultValue": "false",
               "Required": true,
-              "Description": "Allows for inventory of factory-installed certificates: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA`"
+              "Description": "If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA`"
             },
             {
               "Name": "IgnoreValidation",
               "DisplayName": "IgnoreValidation",
               "Type": "Bool",
-              "DefaultValue": "true",
+              "DefaultValue": "false",
+              "DependsOn": null,
               "Required": true,
-              "Description": "WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint."
+              "Description": "WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. Should be set to false in any production scenario."
             },
             {
               "Name": "HTTPSCertWaitTime",
               "DisplayName": "HTTPS Cert Wait Time",
               "Type": "String",
               "DefaultValue": "60",
+              "DependsOn": null,
               "Required": true,
               "Description": "The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted."
+            }
+          ],
+          "EntryParameters": [
+            {
+              "Name": "IncludeIP",
+              "DisplayName": "IncludeIP",
+              "Type": "Bool",
+              "RequiredWhen": {
+                "HasPrivateKey": false,
+                "OnAdd": false,
+                "OnRemove": false,
+                "OnReenrollment": true
+              },
+              "DependsOn": "",
+              "DefaultValue": "false",
+              "Description": "Enables the addition of the device IP as a SAN to the CSR during reenrollment. Used particularly during HTTPSCert reenrollment, where it can be set as desired, and should be set to false during all other operations."
+            },
+            {
+              "Name": "CertificateType",
+              "DisplayName": "CertificateType",
+              "Type": "MultipleChoice",
+              "RequiredWhen": {
+                "HasPrivateKey": false,
+                "OnAdd": true,
+                "OnRemove": true,
+                "OnReenrollment": true
+              },
+              "DependsOn": "",
+              "DefaultValue": "",
+              "Options": "HTTPSCert,iLOLDevID,PlatformCert,iLOIDevID,BMCIDevIDPCA,SystemIAK",
+              "Description": "Specifies the type of device certificate for reenrollment and storage. Must be set manually for deletion and reenrollment."
             }
           ],
           "PasswordOptions": {

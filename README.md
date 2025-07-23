@@ -165,7 +165,6 @@ the Keyfactor Command Portal
    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
    | IncludeIP | IncludeIP | Enables the addition of the device IP as a SAN to the CSR during reenrollment. Used particularly during HTTPSCert reenrollment, where it can be set as desired, and should be set to false during all other operations. | Bool | false | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | ✅ Checked |
-   | CertificateType | CertificateType | Specifies the type of device certificate for reenrollment and storage. Must be set manually for deletion and reenrollment. | MultipleChoice |  | 🔲 Unchecked | ✅ Checked | ✅ Checked | ✅ Checked |
 
    The Entry Parameters tab should look like this:
 

@@ -90,21 +90,6 @@
               "DependsOn": "",
               "DefaultValue": "false",
               "Description": "Enables the addition of the device IP as a SAN to the CSR during reenrollment. Used particularly during HTTPSCert reenrollment, where it can be set as desired, and should be set to false during all other operations."
-            },
-            {
-              "Name": "CertificateType",
-              "DisplayName": "CertificateType",
-              "Type": "MultipleChoice",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": true,
-                "OnRemove": true,
-                "OnReenrollment": true
-              },
-              "DependsOn": "",
-              "DefaultValue": "",
-              "Options": "HTTPSCert,iLOLDevID,PlatformCert,iLOIDevID,BMCIDevIDPCA,SystemIAK",
-              "Description": "Specifies the type of device certificate for reenrollment and storage. Must be set manually for deletion and reenrollment."
             }
           ],
           "PasswordOptions": {

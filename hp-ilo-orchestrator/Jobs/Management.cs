@@ -142,8 +142,8 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                     case CertStoreOperationType.Add:
                         //Add a certificate to the certificate store passed in the config object - only HTTPSCert addition is supported.
                         iLOCertType certTypeAdd =
-                            APIclient.CheckType(JobConfig.JobProperties["CertificateType"].ToString());
-                        if (JobConfig.JobCertificate.ContentsFormat != "PFX")
+                            APIclient.CheckType(JobConfig.JobCertificate?.Alias ?? string.Empty);
+                        if (JobConfig.JobCertificate?.ContentsFormat != "PFX")
                         {
                             throw new Exception(
                                 "Only enrollment of PFX certificates with included password is supported.");
@@ -173,7 +173,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                         //Delete a certificate from the certificate store passed in the config object
                         logger.LogTrace("Beginning management > remove operation.");
                         iLOCertType certTypeDelete =
-                            APIclient.CheckType(JobConfig.JobProperties["CertificateType"].ToString());
+                            APIclient.CheckType(JobConfig.JobCertificate?.Alias ?? string.Empty);
                         if (APIclient.DeleteCertificate(certTypeDelete))
                         {
                             result.Result = OrchestratorJobStatusJobResult.Success;
@@ -294,12 +294,6 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             logger.MethodEntry();
             try
             {
-                if (!mgmtConfig.JobProperties.ContainsKey("CertificateType"))
-                {
-                    throw new Exception(
-                        "CertificateType entry parameter has not been detected. Have you recently updated from version 1 of this extension? Please review the documentation and the changelog to learn more about the new entry parameters.");
-                }
-
                 JobConfig = new HPiLOJobConfig();
                 JobConfig.Capability = mgmtConfig.Capability;
                 JobConfig.JobHistoryId = mgmtConfig.JobHistoryId;

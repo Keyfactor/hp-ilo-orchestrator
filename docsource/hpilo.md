@@ -37,16 +37,13 @@ The following certificate supports addition to an HPiLO cert store:
 	- **Alias:** `HTTPSCert`
 	- **Overwrite:** `Yes`
 		- Overwrite needs to be enabled.
-	- **CertType:** `HTTPSCert`
 	- **IncludeIP:** `False`
 
 ## Management Remove (Removal from certificate store)
 The following certificates can be deleted from an HPiLO cert store:
 - **HTTPS Certificate**
-	- **CertType:** `HTTPSCert`
 	- **IncludeIP:** `false`
 - **iLOLDevID (802.1X Certificate)** 
-	- **CertType:** `iLOLDevID`
 	- **IncludeIP:** `false`
 
 ## Reenrollment / ODKG
@@ -60,13 +57,12 @@ The following certificates can be undergo reenrollment/ODKG using an HPiLO cert 
 	  ```  
 	  - Supported attributes: `CN`, `O`, `OU`, `L`, `ST`, `C`.  
 	  - The `CN` must match the iLO FQDN.
-	  - If `IncludeIP` is set to true, iLO will automatically add its IPv4/IPv6 addresses as SANs. The CN is added as a SAN automatically.  
 	  - **Note:** iLO will reboot after the certificate is installed. 
-	- **CertType:** `HTTPSCert`  
+	- **IncludeIP** If set to true, iLO will automatically add its IPv4/IPv6 addresses as SANs. The CN is added as a SAN automatically.  
 - **iLOLDevID**  
   802.1X Certificate reenrollment. The CSR produced by HPiLO will utilize ECC 384 based key. Please setup an appropriate template and make sure your CA supports this algorithm. 
-	- **Alias:** `1/iLOLDevID`
-	- **CertType:** `iLOLDevID`  
+	- **Alias:** `1/iLOLDevID` 
+	- **IncludeIP** `false`
 	- **Subject String Format:**  
 	The subject string contents depend on the version of HP iLO firmware you are using.
 		##### Versions Below HPiLO 6 1.60 

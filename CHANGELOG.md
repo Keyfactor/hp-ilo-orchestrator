@@ -11,7 +11,6 @@
 
 ### Cert Store Type Changes
 - Management Add job is now supported and enabled.
-- New entry parameters included: `CertType`. This parameter permanently stores the HPiLO type of certificate managed by the orchestrator. Refer to the documentation for more details.
 - New entry parameters included: `IncludeIP`. This parameter is used during HTTPSCert reenrollment/ODKG to include the iLO IP in the CSR. It should be set to `False` for all other operations.
 
 ### Fixes

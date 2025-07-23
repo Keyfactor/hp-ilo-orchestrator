@@ -41,6 +41,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
         public string JobTypeId { get; set; } = string.Empty;
         public string JobId { get; set; } = string.Empty;
         public string Capability { get; set; } = string.Empty;
+        public string ReenrollmentAlias { get; set; } = string.Empty;
     }
 
     public class StoreDetails
@@ -93,7 +94,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
         public string Alias { get; set; } = string.Empty;
         public string PrivateKeyPassword { get; set; } = string.Empty;
         public string ContentsFormat { get; set; } = string.Empty;
-        public bool? Overwrite { get; set; }
+        public bool? Overwrite { get; set; } = true;
         public string SubjectText { get; set; } = string.Empty;
     }
 }

@@ -72,7 +72,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             IHPiLOClient APIclient = APIService.GetRequiredService<IHPiLOClient>();
             // Need to check if CN includes serial number.
             JobConfig.JobProperties.TryGetValue("subjectText", out object? subjectTextObj);
-            iLOCertType CertType = APIclient.CheckType(JobConfig.JobProperties["CertificateType"].ToString());
+            iLOCertType CertType = APIclient.CheckType(JobConfig.ReenrollmentAlias);
             // step 1 - generate CSR via HP iLO
             try
             {
@@ -218,11 +218,6 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             logger.LogTrace($"{JsonConvert.SerializeObject(rnrConfig)}\n\"----------------------\\n");
             try
             {
-                if (!rnrConfig.JobProperties.ContainsKey("CertificateType"))
-                {
-                    throw new Exception(
-                        "CertificateType entry parameter has not been detected. Have you recently updated from version 1 of this extension? Please review the documentation and the changelog to learn more about the new entry parameters.");
-                }
                 JobConfig = new HPiLOJobConfig();
                 JobConfig.Capability = rnrConfig.Capability;
                 JobConfig.JobHistoryId = rnrConfig.JobHistoryId;
@@ -232,6 +227,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                 JobConfig.JobProperties = rnrConfig.JobProperties;
                 JobConfig.ServerError = rnrConfig.ServerError;
                 JobConfig.CertificateStoreDetails = new StoreDetails(rnrConfig.CertificateStoreDetails);
+                JobConfig.ReenrollmentAlias = rnrConfig.Alias;
                 // resolve secrets using the PAM settings configured on the orchestrator (if any)
                 // if PAM is not configured, the resolved values will be the ones passed by the orchestrator, rather than looked up via PAM provider extension.
                 if (rnrConfig.ServerUsername != null)

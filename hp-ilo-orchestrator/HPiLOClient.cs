@@ -227,7 +227,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         {
             _logger.LogTrace("Entering GetAllCertificates");
             _logger.LogDebug("Retrieving TLS certificate from BaseAddress={Base}", _client.BaseAddress);
-            Dictionary<string, object> Paramaters = new() { { "CertificateType", "HTTPSCert" } };
+            Dictionary<string, object> Paramaters = new();
             //This retrieves the TLS certificate chain from the iLO's BaseAddress. There is no way to inventory it 
             //through the Redfish API, so we do it manually.
             List<X509Certificate2> certs = GetCertificateChain(_client.BaseAddress!.ToString());
@@ -287,7 +287,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
             };
 
             string jsonBody = JsonConvert.SerializeObject(body);
-            _logger.LogDebug("Import payload: {Payload}", jsonBody);
+            _logger.LogDebug("Import payload: CertificateType={Type}", certType);
             HttpRequestMessage req = new(HttpMethod.Post, new Uri(endpoint, UriKind.RelativeOrAbsolute))
             {
                 Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
@@ -305,25 +305,21 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Simple string parser to determine the enum certificate type.
+        /// Determines the enum certificate type by checking if the input string contains any of the substrings.
         /// </summary>
         public iLOCertType CheckType(string input)
         {
-            Dictionary<string, iLOCertType> typeMappings = new()
+            if (string.IsNullOrWhiteSpace(input))
             {
-                { "iLOLDevID", iLOCertType.iLOLDevID },
-                { "HTTPSCert", iLOCertType.HTTPSCert },
-                { "PlatformCert", iLOCertType.PlatformCert },
-                { "iLOIDevID", iLOCertType.iLOIDevID },
-                { "BMCIDevIDPCA", iLOCertType.BMCIDevIDPCA },
-                { "SystemIAK", iLOCertType.SystemIAK }
-            };
+                _logger.LogError("Input is null or empty.");
+                throw new ArgumentException("Input cannot be null or empty.");
+            }
 
-            foreach (KeyValuePair<string, iLOCertType> mapping in typeMappings)
+            foreach (iLOCertType certType in Enum.GetValues(typeof(iLOCertType)))
             {
-                if (input.Contains(mapping.Key))
+                if (input.Contains(certType.ToString(), StringComparison.OrdinalIgnoreCase))
                 {
-                    return mapping.Value;
+                    return certType;
                 }
             }
 
@@ -420,7 +416,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
             _logger.LogTrace("Processing certificates for alias: {Alias}", alias);
             List<iLOCertificateInfo> infos = RetrieveCert(certRef.ODataId);
             _logger.LogDebug("Retrieved {Count} cert infos for alias {Alias}", infos.Count, alias);
-            Dictionary<string, object> Paramaters = new() { { "CertificateType", GetCertificateTypeFromAlias(alias) } };
+            Dictionary<string, object> Paramaters = new();
             return infos.Select(info => new CurrentInventoryItem
             {
                 Alias = alias,

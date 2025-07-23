@@ -13,16 +13,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
+		<PackageReference Include="BouncyCastle.Cryptography" Version="2.6.1" />
 		<PackageReference Include="Keyfactor.Logging" Version="1.1.2" />
 		<PackageReference Include="Keyfactor.Orchestrators.Common" Version="3.2.0" />
-		<PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="0.7.0" />
-		<PackageReference Include="Keyfactor.Orchestrators.IOrchestratorRegistrationUpdater" Version="1.0.3" />
-		<PackageReference Include="Keyfactor.PKI" Version="5.5.0" />
-		<PackageReference Include="Keyfactor.Platform.IPAMProvider" Version="1.0.0" />
+		<PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="1.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="System.Formats.Asn1" Version="9.0.2" />
 	</ItemGroup>
 
 	<ItemGroup>

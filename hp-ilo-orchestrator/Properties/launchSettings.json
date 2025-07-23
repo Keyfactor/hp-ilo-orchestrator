@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Keyfactor.Orchestrators.SOS": {
+    "Keyfactor.Orchestrators.HPiLO": {
       "commandName": "Project",
       "remoteDebugEnabled": true
     }

@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+#nullable enable
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -24,9 +25,26 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
 {
     public class HPiLOCertificate
     {
-        [JsonProperty("@odata.context")] public string OdataContext { get; set; }
+        // Constructor to initialize required properties
+        public HPiLOCertificate(
+            string odataId,
+            string odataType,
+            string certificateString,
+            CertificateType certificateType,
+            string id,
+            string name)
+        {
+            OdataId = odataId ?? throw new ArgumentNullException(nameof(odataId));
+            OdataType = odataType ?? throw new ArgumentNullException(nameof(odataType));
+            CertificateString = certificateString ?? throw new ArgumentNullException(nameof(certificateString));
+            CertificateType = certificateType;
+            Id = id ?? throw new ArgumentNullException(nameof(id));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+        }
 
-        [JsonProperty("@odata.etag")] public string OdataEtag { get; set; }
+        [JsonProperty("@odata.context")] public string? OdataContext { get; set; } // Optional
+
+        [JsonProperty("@odata.etag")] public string? OdataEtag { get; set; } // Optional
 
         [JsonProperty("@odata.id")] [Required] public string OdataId { get; set; } // Required property
 
@@ -45,19 +63,19 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
 
         [JsonProperty("Id")] [Required] public string Id { get; set; } // Required property
 
-        [JsonProperty("Issuer")] public CertificateIssuer Issuer { get; set; }
+        [JsonProperty("Issuer")] public CertificateIssuer? Issuer { get; set; } // Optional
 
         [JsonProperty("Name")] [Required] public string Name { get; set; } // Required property
 
-        [JsonProperty("SerialNumber")] public string SerialNumber { get; set; }
+        [JsonProperty("SerialNumber")] public string? SerialNumber { get; set; } // Optional
 
-        [JsonProperty("Subject")] public CertificateSubject Subject { get; set; }
+        [JsonProperty("Subject")] public CertificateSubject? Subject { get; set; } // Optional
 
-        [JsonProperty("ValidNotAfter")] public DateTime? ValidNotAfter { get; set; }
+        [JsonProperty("ValidNotAfter")] public DateTime? ValidNotAfter { get; set; } // Optional
 
-        [JsonProperty("ValidNotBefore")] public DateTime? ValidNotBefore { get; set; }
+        [JsonProperty("ValidNotBefore")] public DateTime? ValidNotBefore { get; set; } // Optional
 
-        [JsonProperty("UefiSignatureOwner")] public Guid? UefiSignatureOwner { get; set; }
+        [JsonProperty("UefiSignatureOwner")] public Guid? UefiSignatureOwner { get; set; } // Optional
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -70,39 +88,39 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Models
 
     public class CertificateIssuer
     {
-        [JsonProperty("City")] public string City { get; set; }
+        [JsonProperty("City")] public string? City { get; set; } // Optional
 
-        [JsonProperty("CommonName")] public string CommonName { get; set; }
+        [JsonProperty("CommonName")] public string? CommonName { get; set; } // Optional
 
-        [JsonProperty("Country")] public string Country { get; set; }
+        [JsonProperty("Country")] public string? Country { get; set; } // Optional
 
-        [JsonProperty("DisplayString")] public string DisplayString { get; set; } // May be null
+        [JsonProperty("DisplayString")] public string? DisplayString { get; set; } // Optional
 
-        [JsonProperty("Email")] public string Email { get; set; } // May be null
+        [JsonProperty("Email")] public string? Email { get; set; } // Optional
 
-        [JsonProperty("Organization")] public string Organization { get; set; }
+        [JsonProperty("Organization")] public string? Organization { get; set; } // Optional
 
-        [JsonProperty("OrganizationalUnit")] public string OrganizationalUnit { get; set; }
+        [JsonProperty("OrganizationalUnit")] public string? OrganizationalUnit { get; set; } // Optional
 
-        [JsonProperty("State")] public string State { get; set; }
+        [JsonProperty("State")] public string? State { get; set; } // Optional
     }
 
     public class CertificateSubject
     {
-        [JsonProperty("City")] public string City { get; set; }
+        [JsonProperty("City")] public string? City { get; set; } // Optional
 
-        [JsonProperty("CommonName")] public string CommonName { get; set; }
+        [JsonProperty("CommonName")] public string? CommonName { get; set; } // Optional
 
-        [JsonProperty("Country")] public string Country { get; set; }
+        [JsonProperty("Country")] public string? Country { get; set; } // Optional
 
-        [JsonProperty("DisplayString")] public string DisplayString { get; set; } // May be null
+        [JsonProperty("DisplayString")] public string? DisplayString { get; set; } // Optional
 
-        [JsonProperty("Email")] public string Email { get; set; } // May be null
+        [JsonProperty("Email")] public string? Email { get; set; } // Optional
 
-        [JsonProperty("Organization")] public string Organization { get; set; }
+        [JsonProperty("Organization")] public string? Organization { get; set; } // Optional
 
-        [JsonProperty("OrganizationalUnit")] public string OrganizationalUnit { get; set; }
+        [JsonProperty("OrganizationalUnit")] public string? OrganizationalUnit { get; set; } // Optional
 
-        [JsonProperty("State")] public string State { get; set; }
+        [JsonProperty("State")] public string? State { get; set; } // Optional
     }
 }

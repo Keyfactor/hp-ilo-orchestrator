@@ -11,7 +11,7 @@
 			},
 			"CertStores.HPiLO.Management": {
 				"assemblypath": "Keyfactor.Orchestrators.HPiLO.dll",
-				"TypeFullName": "Keyfactor.Extensions.Orchestrator.HPiLO.Jobs.Reenrollment"
+				"TypeFullName": "Keyfactor.Extensions.Orchestrator.HPiLO.Jobs.Management"
 			}
 		}
 	}

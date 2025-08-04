@@ -38,7 +38,7 @@
           "ShortName": "HPiLO",
           "Capability": "HPiLO",
           "LocalStore": false,
-          "StorePathDescription": "This should contain the path pointsing to the HPiLO instance address, IP or domain name.",
+          "StorePathDescription": "This should contain the path pointing to the HPiLO instance address, IP or domain name.",
           "ClientMachineDescription": "Should contain a copy of the store path for compatibility reasons but is currently unused.",
           "SupportedOperations": {
             "Add": true,

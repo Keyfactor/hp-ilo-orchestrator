@@ -2,7 +2,7 @@
 
 ## v1.1
 ### ⚠️ Important Notice
-**Cert Store Type has been changed from version 1.0. Please update existing stores to include the new entry parameters, enable Add job functionality and make sure the default values for custom fields and entry paremeters align, then run an inventory job afterwards. See store type documentation for reference.**
+**Cert Store Type has been changed from version 1.0. Please update existing stores to include the new entry parameters, enable Add job functionality and make sure the default values for custom fields and entry parameters align, then run an inventory job afterwards. See store type documentation for reference.**
 
 ### New Features
 - Added support for HTTPSCert certificate "Add" job.

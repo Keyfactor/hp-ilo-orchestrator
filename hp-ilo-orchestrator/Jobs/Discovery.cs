@@ -16,4 +16,5 @@
 
 namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
 {
+    // Blank space as discovery is not supported.
 }

@@ -33,7 +33,7 @@
 
 This is an HP iLO orchestrator extension.
 ### ⚠️ Important Notice
-**Cert Store Type has been changed from version 1.0. Please update existing stores to include the new entry parameter, enable Add job functionality and make sure the default values for custom fields and entry paremeters align, then run an inventory job afterwards. Please see Changelog for the full list of many changes. See store type documentation below for reference.**
+**Cert Store Type has been changed from version 1.0. Please update existing stores to include the new entry parameter, enable Add job functionality and make sure the default values for custom fields and entry parameters align, then run an inventory job afterwards. Please see Changelog for the full list of many changes. See store type documentation below for reference.**
 
 
 
@@ -241,7 +241,7 @@ the Keyfactor Command Portal
    | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | Should contain a copy of the store path for compatibility reasons but is currently unused. |
-   | Store Path | This should contain the path pointsing to the HPiLO instance address, IP or domain name. |
+   | Store Path | This should contain the path pointing to the HPiLO instance address, IP or domain name. |
    | Store Password | Password to use when reading/writing to store |
    | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
    | InventoryAll | If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
@@ -270,7 +270,7 @@ the Keyfactor Command Portal
    | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | Should contain a copy of the store path for compatibility reasons but is currently unused. |
-   | Store Path | This should contain the path pointsing to the HPiLO instance address, IP or domain name. |
+   | Store Path | This should contain the path pointing to the HPiLO instance address, IP or domain name. |
    | Store Password | Password to use when reading/writing to store |
    | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
    | Properties.InventoryAll | If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |

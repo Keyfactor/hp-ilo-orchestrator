@@ -20,10 +20,13 @@ using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Pkcs;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Pkcs;
 using System;
-using System.Net.Http;
-using System.Text.RegularExpressions;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
 {
@@ -118,7 +121,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
 
             #endregion
 
-            Initialize(config);
+            ManagementInitialize(config);
 
             logger.LogDebug("Begin Management job...");
 
@@ -130,24 +133,51 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                 FailureMessage =
                     "Custom message you want to show to show up as the error message in Job History in KF Command"
             };
-            HPiLOClient APIclient = APIService.GetRequiredService<HPiLOClient>();
             try
             {
+                HPiLOClient APIclient = APIService.GetRequiredService<HPiLOClient>();
                 //Management jobs, unlike Discovery, Inventory, and Reenrollment jobs can have 3 different purposes:
                 switch (config.OperationType)
                 {
                     case CertStoreOperationType.Add:
-                        //Add a certificate to the certificate store passed in the config object
+                        //Add a certificate to the certificate store passed in the config object - only HTTPSCert addition is supported.
+                        iLOCertType certTypeAdd =
+                            APIclient.CheckType(JobConfig.JobCertificate?.Alias ?? string.Empty);
+                        if (JobConfig.JobCertificate?.ContentsFormat != "PFX")
+                        {
+                            throw new Exception(
+                                "Only enrollment of PFX certificates with included password is supported.");
+                        }
+
+                        if (certTypeAdd == iLOCertType.HTTPSCert)
+                        {
+                            if (APIclient.AddCertificate(
+                                    ConvertBase64Pkcs12ToPem_BC(JobConfig.JobCertificate?.Contents,
+                                        JobConfig.JobCertificate.PrivateKeyPassword),
+                                    certTypeAdd))
+                            {
+                                result.Result = OrchestratorJobStatusJobResult.Success;
+                                result.FailureMessage = $"Successfully installed {certTypeAdd}";
+                            }
+                        }
+                        else
+                        {
+                            //Unsupported addition.
+                            logger.LogError(
+                                $"Unsupported certificate type for certification addition:{certTypeAdd}. Only HTTPSCert addition is supported.");
+                        }
+
                         break;
 
                     case CertStoreOperationType.Remove:
                         //Delete a certificate from the certificate store passed in the config object
                         logger.LogTrace("Beginning management > remove operation.");
-
-                        if (APIclient.DeleteCertificate(JobConfig.JobCertificate.Alias))
+                        iLOCertType certTypeDelete =
+                            APIclient.CheckType(JobConfig.JobCertificate?.Alias ?? string.Empty);
+                        if (APIclient.DeleteCertificate(certTypeDelete))
                         {
                             result.Result = OrchestratorJobStatusJobResult.Success;
-                            result.FailureMessage = string.Empty;
+                            result.FailureMessage = $"Successfully deleted {certTypeDelete}";
                         }
 
                         logger.LogTrace("Completed management > remove operation.");
@@ -179,69 +209,119 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             return result;
         }
 
-        public void Initialize(ManagementJobConfiguration mgmtConfig)
+        /// <summary>
+        ///     This converts the passed down PKCS12 (PFX) certificate in Base64 format to PEM format using BouncyCastle.
+        ///     BouncyCastle is used here due to the MS Library refusing to export the key in PKCS#1 format, which is required by
+        ///     iLO.
+        /// </summary>
+        /// <param name="base64Pfx"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string ConvertBase64Pkcs12ToPem_BC(string base64Pfx, string password)
+        {
+            if (string.IsNullOrWhiteSpace(base64Pfx))
+            {
+                throw new ArgumentNullException(nameof(base64Pfx));
+            }
+
+            if (password == null)
+            {
+                throw new ArgumentNullException(nameof(password));
+            }
+
+            // 1) Decode and load the PFX
+            byte[] pfxData = Convert.FromBase64String(base64Pfx);
+            using MemoryStream stream = new(pfxData, false);
+            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            store.Load(stream, password.ToCharArray());
+
+            // 2) Extract the leaf cert + key
+            string alias = store.Aliases.First(a => store.IsKeyEntry(a));
+            AsymmetricKeyEntry keyEntry = store.GetKey(alias);
+            X509CertificateEntry certEntry = store.GetCertificate(alias);
+
+            // 3) Helper to emit PEM with '\n' only
+            static string ToPem(string label, byte[] der)
+            {
+                StringBuilder sb = new();
+                sb.Append($"-----BEGIN {label}-----\n");
+                string b64 = Convert.ToBase64String(der);
+                const int lineLen = 64;
+                for (int i = 0; i < b64.Length; i += lineLen)
+                {
+                    sb.Append(b64, i, Math.Min(lineLen, b64.Length - i))
+                        .Append('\n');
+                }
+
+                sb.Append($"-----END {label}-----\n");
+                return sb.ToString();
+            }
+
+            // 4) Build the PEM blocks
+            string certPem = ToPem("CERTIFICATE", certEntry.Certificate.GetEncoded());
+
+            string keyPem;
+            if (keyEntry.Key is RsaPrivateCrtKeyParameters rsaParams)
+            {
+                // RSA PRIVATE KEY (PKCS#1)
+                RsaPrivateKeyStructure rsaStruct = new(
+                    rsaParams.Modulus,
+                    rsaParams.PublicExponent,
+                    rsaParams.Exponent,
+                    rsaParams.P,
+                    rsaParams.Q,
+                    rsaParams.DP,
+                    rsaParams.DQ,
+                    rsaParams.QInv);
+                keyPem = ToPem("RSA PRIVATE KEY", rsaStruct.ToAsn1Object().GetEncoded());
+            }
+            else
+            {
+                // PRIVATE KEY (PKCS#8)
+                PrivateKeyInfo pkInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keyEntry.Key);
+                keyPem = ToPem("PRIVATE KEY", pkInfo.ToAsn1Object().GetEncoded());
+            }
+
+            // 5) Combine and strip any '\r', ensuring only '\n'
+            return (certPem + keyPem).Replace("\r", "");
+        }
+
+        public void ManagementInitialize(ManagementJobConfiguration mgmtConfig)
         {
             logger = LogHandler.GetClassLogger(GetType());
 
             logger.MethodEntry();
-            logger.LogTrace("values received from command: ");
-            logger.LogTrace($"{JsonConvert.SerializeObject(mgmtConfig)}\n\"----------------------\\n");
-
-            JobConfig = new HPiLOJobConfig();
-            JobConfig.Capability = mgmtConfig.Capability;
-            JobConfig.JobHistoryId = mgmtConfig.JobHistoryId;
-            JobConfig.JobCancelled = mgmtConfig.JobCancelled;
-            JobConfig.OperationType = mgmtConfig.OperationType;
-            JobConfig.RequestStatus = mgmtConfig.RequestStatus;
-            JobConfig.UseSSL = mgmtConfig.UseSSL;
-            JobConfig.JobProperties = mgmtConfig.JobProperties;
-            JobConfig.ServerError = mgmtConfig.ServerError;
-            JobConfig.Overwrite = mgmtConfig.Overwrite;
-
-            JobConfig.JobCertificate = new HPiLOJobCertificate(mgmtConfig.JobCertificate, mgmtConfig.JobProperties);
-            JobConfig.CertificateStoreDetails = new StoreDetails(mgmtConfig.CertificateStoreDetails);
-
-            // resolve secrets using the PAM settings configured on the orchestrator (if any)
-            // if PAM is not configured, the resolved values will be the ones passed by the orchestrator, rather than looked up via PAM provider extension.
-            JobConfig.ServerUsername = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server Username",
-                mgmtConfig.ServerUsername);
-            JobConfig.ServerPassword = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server Password",
-                mgmtConfig.ServerPassword);
-
-            // Generate the ServiceProvider for the HPiLOClient
-            ServiceCollection serviceCollection = new();
-            serviceCollection.AddHttpClient();
-            serviceCollection.AddSingleton(sp =>
-                new HPiLOClient(
-                    sp.GetRequiredService<IHttpClientFactory>(),
-                    JobConfig.CertificateStoreDetails.StorePath,
-                    JobConfig.ServerUsername,
-                    JobConfig.ServerPassword,
-                    inventoryall: false,
-                    ignorevalidation: Convert.ToBoolean(JobConfig.CertificateStoreDetails.Properties.IgnoreValidation),
-                    waittime:JobConfig.CertificateStoreDetails.Properties.HTTPSCertWaitTime,
-                    inputlogger: logger
-                ));
-            APIService = serviceCollection.BuildServiceProvider();
-            ;
-        }
-
-        // Extracts Manager ID from certificate alias
-        public static int ExtractManager(string input)
-        {
-            // Regex pattern: colon, then capture one or more digits, then a slash.
-            Regex regex = new(@":(\d+)/");
-            Match match = regex.Match(input);
-            if (match.Success)
+            try
             {
-                string numberStr = match.Groups[1].Value;
-                if (int.TryParse(numberStr, out int result))
-                {
-                    return result;
-                }
+                JobConfig = new HPiLOJobConfig();
+                JobConfig.Capability = mgmtConfig.Capability;
+                JobConfig.JobHistoryId = mgmtConfig.JobHistoryId;
+                JobConfig.JobCancelled = mgmtConfig.JobCancelled;
+                JobConfig.OperationType = mgmtConfig.OperationType;
+                JobConfig.RequestStatus = mgmtConfig.RequestStatus;
+                JobConfig.UseSSL = mgmtConfig.UseSSL;
+                JobConfig.JobProperties = mgmtConfig.JobProperties;
+                JobConfig.ServerError = mgmtConfig.ServerError;
+                JobConfig.Overwrite = mgmtConfig.Overwrite;
+
+                JobConfig.JobCertificate = new HPiLOJobCertificate(mgmtConfig.JobCertificate, mgmtConfig.JobProperties);
+                JobConfig.CertificateStoreDetails = new StoreDetails(mgmtConfig.CertificateStoreDetails);
+
+                // resolve secrets using the PAM settings configured on the orchestrator (if any)
+                // if PAM is not configured, the resolved values will be the ones passed by the orchestrator, rather than looked up via PAM provider extension.
+                JobConfig.ServerUsername = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server Username",
+                    mgmtConfig.ServerUsername);
+                JobConfig.ServerPassword = PamResolver.ResolvePAMField(PamSecretResolver, logger, "Server Password",
+                    mgmtConfig.ServerPassword);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error evaluating the job parameters: {ex.Message}");
+                throw;
             }
 
-            throw new ArgumentException("The input string does not match the expected format.");
+            InitializeHttpClient(JobConfig);
         }
     }
 }

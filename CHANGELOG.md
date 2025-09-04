@@ -1,7 +1,7 @@
 ﻿# Changelog
 ## V1.1.1
 ### Fixes
-- Fixed issue with Management Job not functioning correctly on older versions of command.
+- Fixed issue with Management Job not functioning correctly on older versions of Command.
 
 ## v1.1
 ### ⚠️ Important Notice
@@ -27,3 +27,4 @@
 ### Initial Release
 
 - Initial extension release.
+

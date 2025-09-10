@@ -143,12 +143,23 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                         //Add a certificate to the certificate store passed in the config object - only HTTPSCert addition is supported.
                         iLOCertType certTypeAdd =
                             APIclient.CheckType(JobConfig.JobCertificate?.Alias ?? string.Empty);
+
                         if (JobConfig.JobCertificate?.ContentsFormat != "PFX")
                         {
-                            throw new Exception(
-                                "Only enrollment of PFX certificates with included password is supported.");
-                        }
+                            if (JobConfig.JobCertificate?.ContentsFormat != "PEM")
+                            {
+                                // Reach here for legacy deduction of contents format
+                                if (string.IsNullOrEmpty(JobConfig.JobCertificate?.PrivateKeyPassword))
+                                {
+                                    //if password does not exist type is pem/der
+                                    //if not type is pem/der so throw error here
+                                    throw new Exception(
+                                        "Only enrollment of PFX certificates with included password is supported.");
+                                }
+                                //else type is pfx.
+                            }
 
+                        }
                         if (certTypeAdd == iLOCertType.HTTPSCert)
                         {
                             if (APIclient.AddCertificate(

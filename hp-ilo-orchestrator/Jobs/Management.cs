@@ -151,8 +151,8 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                                 // Reach here for legacy deduction of contents format
                                 if (string.IsNullOrEmpty(JobConfig.JobCertificate?.PrivateKeyPassword))
                                 {
-                                    //if password does not exist type is pem/der
-                                    //if not type is pem/der so throw error here
+                                    // If password does not exist, certificate is PEM/DER format.
+                                    // Throw error because enrollment of PEM/DER certificates without password is not supported; only PFX with password is supported.
                                     throw new Exception(
                                         "Only enrollment of PFX certificates with included password is supported.");
                                 }

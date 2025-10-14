@@ -5,9 +5,9 @@
 <p align="center">
   <!-- Badges -->
 <img src="https://img.shields.io/badge/integration_status-pilot-3D1973?style=flat-square" alt="Integration Status: pilot" />
-<a href="https://github.com/Keyfactor/hp-ilo-orchestrator/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/hp-ilo-orchestrator?style=flat-square" alt="Release" /></a>
-<img src="https://img.shields.io/github/issues/Keyfactor/hp-ilo-orchestrator?style=flat-square" alt="Issues" />
-<img src="https://img.shields.io/github/downloads/Keyfactor/hp-ilo-orchestrator/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
+<a href="https://github.com/Keyfactor/hp-ilo-orchestrator-dev/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/hp-ilo-orchestrator-dev?style=flat-square" alt="Release" /></a>
+<img src="https://img.shields.io/github/issues/Keyfactor/hp-ilo-orchestrator-dev?style=flat-square" alt="Issues" />
+<img src="https://img.shields.io/github/downloads/Keyfactor/hp-ilo-orchestrator-dev/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
 </p>
 
 <p align="center">
@@ -137,8 +137,8 @@ the Keyfactor Command Portal
    ##### Advanced Tab
    | Attribute | Value | Description |
    | --------- | ----- | ----- |
-   | Supports Custom Alias | Optional | Determines if an individual entry within a store can have a custom Alias. |
-   | Private Key Handling | Optional | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
+   | Supports Custom Alias | Required | Determines if an individual entry within a store can have a custom Alias. |
+   | Private Key Handling | Required | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
    | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
 
    The Advanced tab should look like this:
@@ -176,9 +176,9 @@ the Keyfactor Command Portal
 
 1. **Download the latest HP iLO Universal Orchestrator extension from GitHub.**
 
-    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator-dev/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
 
-   | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `hp-ilo-orchestrator` .NET version to download |
+   | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `hp-ilo-orchestrator-dev` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |
    | Older than `11.0.0` | | | `net6.0` |
    | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` |
@@ -197,10 +197,10 @@ the Keyfactor Command Portal
 
 3. **Create a new directory for the HP iLO Universal Orchestrator extension inside the extensions directory.**
 
-    Create a new directory called `hp-ilo-orchestrator`.
+    Create a new directory called `hp-ilo-orchestrator-dev`.
     > The directory name does not need to match any names used elsewhere; it just has to be unique within the extensions directory.
 
-4. **Copy the contents of the downloaded and unzipped assemblies from __step 2__ to the `hp-ilo-orchestrator` directory.**
+4. **Copy the contents of the downloaded and unzipped assemblies from __step 2__ to the `hp-ilo-orchestrator-dev` directory.**
 
 5. **Restart the Universal Orchestrator service.**
 
@@ -241,7 +241,7 @@ the Keyfactor Command Portal
    | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | Should contain a copy of the store path for compatibility reasons but is currently unused. |
-   | Store Path | This should contain the path pointing to the HPiLO instance address, IP or domain name. |
+   | Store Path | This should contain the full URI pointing to the HPiLO instance, using IP (e.g. `https://10.1.1.1`) or domain name (e.g. `https://hpilo.test.local`). The orchestrator will connect to the iLO instance using the iLO API. |
    | Store Password | Password to use when reading/writing to store |
    | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
    | InventoryAll | If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
@@ -270,7 +270,7 @@ the Keyfactor Command Portal
    | Category | Select "HP iLO Cert Store" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | Should contain a copy of the store path for compatibility reasons but is currently unused. |
-   | Store Path | This should contain the path pointing to the HPiLO instance address, IP or domain name. |
+   | Store Path | This should contain the full URI pointing to the HPiLO instance, using IP (e.g. `https://10.1.1.1`) or domain name (e.g. `https://hpilo.test.local`). The orchestrator will connect to the iLO instance using the iLO API. |
    | Store Password | Password to use when reading/writing to store |
    | Orchestrator | Select an approved orchestrator capable of managing `HPiLO` certificates. Specifically, one with the `HPiLO` capability. |
    | Properties.InventoryAll | If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA` |
@@ -345,7 +345,7 @@ The following certificates can be deleted from an HPiLO cert store:
 ### Reenrollment / ODKG
 The following certificates can be undergo reenrollment/ODKG using an HPiLO cert store:
 - **HTTPS Certificate**  
-  Following the reenrollment of an HTTPS certificate, HP iLO will reboot. The CSR produced by HP iLO for this purpose will utilize a RSA 2084 key. Please ensure your CA supports this algorithm and has an appropriate template configured.
+  Following the reenrollment of an HTTPS certificate, HP iLO will reboot. The CSR produced by HP iLO for this purpose will utilize an RSA 2048 key. Please ensure your CA supports this algorithm and has an appropriate template configured.
 	- **Alias:** `HTTPSCert`  
 	- **Subject String Format:**  
 	  ```text
@@ -356,7 +356,7 @@ The following certificates can be undergo reenrollment/ODKG using an HPiLO cert 
 	  - **Note:** iLO will reboot after the certificate is installed. 
 	- **IncludeIP** If set to true, iLO will automatically add its IPv4/IPv6 addresses as SANs. The CN is added as a SAN automatically.  
 - **iLOLDevID**  
-  802.1X Certificate reenrollment. The CSR produced by HPiLO will utilize ECC 384 based key. Please setup an appropriate template and make sure your CA supports this algorithm. 
+  802.1X Certificate reenrollment. The CSR produced by HPiLO will utilize an ECC 384 based key. Please setup an appropriate template and make sure your CA supports this algorithm. 
 	- **Alias:** `1/iLOLDevID` 
 	- **IncludeIP** `false`
 	- **Subject String Format:**  

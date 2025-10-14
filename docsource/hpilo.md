@@ -49,7 +49,7 @@ The following certificates can be deleted from an HPiLO cert store:
 ## Reenrollment / ODKG
 The following certificates can be undergo reenrollment/ODKG using an HPiLO cert store:
 - **HTTPS Certificate**  
-  Following the reenrollment of an HTTPS certificate, HP iLO will reboot. The CSR produced by HP iLO for this purpose will utilize a RSA 2084 key. Please ensure your CA supports this algorithm and has an appropriate template configured.
+  Following the reenrollment of an HTTPS certificate, HP iLO will reboot. The CSR produced by HP iLO for this purpose will utilize an RSA 2048 key. Please ensure your CA supports this algorithm and has an appropriate template configured.
 	- **Alias:** `HTTPSCert`  
 	- **Subject String Format:**  
 	  ```text
@@ -60,7 +60,7 @@ The following certificates can be undergo reenrollment/ODKG using an HPiLO cert 
 	  - **Note:** iLO will reboot after the certificate is installed. 
 	- **IncludeIP** If set to true, iLO will automatically add its IPv4/IPv6 addresses as SANs. The CN is added as a SAN automatically.  
 - **iLOLDevID**  
-  802.1X Certificate reenrollment. The CSR produced by HPiLO will utilize ECC 384 based key. Please setup an appropriate template and make sure your CA supports this algorithm. 
+  802.1X Certificate reenrollment. The CSR produced by HPiLO will utilize an ECC 384 based key. Please setup an appropriate template and make sure your CA supports this algorithm. 
 	- **Alias:** `1/iLOLDevID` 
 	- **IncludeIP** `false`
 	- **Subject String Format:**  

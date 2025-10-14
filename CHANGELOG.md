@@ -1,4 +1,10 @@
 ﻿# Changelog
+## V1.1.2
+### Fixes
+- Improved docs.
+- Fixed issue with credentials getting logged during reenrollment jobs. 
+- Changed certificate store type - CustomAlias and PrivateKeyHandling now set to `Required`.
+
 ## V1.1.1
 ### Fixes
 - Fixed issue with Management Job not functioning correctly on older versions of Command.

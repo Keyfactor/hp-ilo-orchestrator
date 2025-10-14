@@ -214,8 +214,6 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
             logger = LogHandler.GetClassLogger(GetType());
 
             logger.MethodEntry();
-            logger.LogTrace("values received from command: ");
-            logger.LogTrace($"{JsonConvert.SerializeObject(rnrConfig)}\n\"----------------------\\n");
             try
             {
                 JobConfig = new HPiLOJobConfig();

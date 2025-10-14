@@ -38,8 +38,8 @@
           "ShortName": "HPiLO",
           "Capability": "HPiLO",
           "LocalStore": false,
-          "StorePathDescription": "This should contain the path pointing to the HPiLO instance address, IP or domain name.",
-          "ClientMachineDescription": "Should contain a copy of the store path for compatibility reasons but is currently unused.",
+          "StorePathDescription": "This should contain the full URI pointing to the HPiLO instance, using IP (e.g. `https://10.1.1.1/`) or domain name (e.g. `https://hpilo.test.local/`). The orchestrator will connect to the iLO instance using the iLO API.",
+          "ClientMachineDescription": "Currently unused.",
           "SupportedOperations": {
             "Add": true,
             "Create": false,
@@ -97,11 +97,11 @@
             "StoreRequired": false,
             "Style": "Default"
           },
-          "PrivateKeyAllowed": "Optional",
+          "PrivateKeyAllowed": "Required",
           "ServerRequired": true,
           "PowerShell": false,
           "BlueprintAllowed": false,
-          "CustomAliasAllowed": "Optional"
+          "CustomAliasAllowed": "Required"
         }
       ]
     }

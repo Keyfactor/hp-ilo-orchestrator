@@ -311,8 +311,8 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         {
             if (string.IsNullOrWhiteSpace(input))
             {
-                _logger.LogError("Input is null or empty.");
-                throw new ArgumentException("Input cannot be null or empty.");
+                _logger.LogError("Input is null or empty.  Please specify alias.");
+                throw new ArgumentException("Input cannot be null or empty.  Please specify alias.");
             }
 
             foreach (iLOCertType certType in Enum.GetValues(typeof(iLOCertType)))
@@ -323,8 +323,8 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
                 }
             }
 
-            _logger.LogError("Unknown CSR type for input: {Input}", input);
-            throw new ArgumentException("Unknown CSR type");
+            _logger.LogError("Unknown CSR type for input: {Input}. Please specify alias.", input);
+            throw new ArgumentException("Unknown CSR type based on alias input. Please specify alias.");
         }
 
         /// <summary>

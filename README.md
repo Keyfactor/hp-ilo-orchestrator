@@ -160,6 +160,33 @@ the Keyfactor Command Portal
 
    ![HPiLO Custom Fields Tab](docsource/images/HPiLO-custom-fields-store-type-dialog.png)
 
+
+   ###### InventoryAll
+   If true, allows for inventory of additional factory-installed certificates and their chains: `Platform Cert`,`SystemIAK`,`SystemIDevID`, `iLOIDevID/BMCIDevIDPCA`
+
+   ![HPiLO Custom Field - InventoryAll](docsource/images/HPiLO-custom-field-InventoryAll-dialog.png)
+   ![HPiLO Custom Field - InventoryAll](docsource/images/HPiLO-custom-field-InventoryAll-validation-options-dialog.png)
+
+
+
+   ###### IgnoreValidation
+   WARNING: Only enable if testing. Used to disable certificate validation checks at the API endpoint. Should be set to false in any production scenario.
+
+   ![HPiLO Custom Field - IgnoreValidation](docsource/images/HPiLO-custom-field-IgnoreValidation-dialog.png)
+   ![HPiLO Custom Field - IgnoreValidation](docsource/images/HPiLO-custom-field-IgnoreValidation-validation-options-dialog.png)
+
+
+
+   ###### HTTPS Cert Wait Time
+   The HPiLO API requires the user to wait while the HTTPS Cert CSR is generated. HP suggests a time of 60 seconds, as is the default setting, but it can be adjusted.
+
+   ![HPiLO Custom Field - HTTPSCertWaitTime](docsource/images/HPiLO-custom-field-HTTPSCertWaitTime-dialog.png)
+   ![HPiLO Custom Field - HTTPSCertWaitTime](docsource/images/HPiLO-custom-field-HTTPSCertWaitTime-validation-options-dialog.png)
+
+
+
+
+
    ##### Entry Parameters Tab
 
    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
@@ -170,21 +197,29 @@ the Keyfactor Command Portal
 
    ![HPiLO Entry Parameters Tab](docsource/images/HPiLO-entry-parameters-store-type-dialog.png)
 
+
+   ##### IncludeIP
+   Enables the addition of the device IP as a SAN to the CSR during reenrollment. Used particularly during HTTPSCert reenrollment, where it can be set as desired, and should be set to false during all other operations.
+
+   ![HPiLO Entry Parameter - IncludeIP](docsource/images/HPiLO-entry-parameters-store-type-dialog-IncludeIP.png)
+   ![HPiLO Entry Parameter - IncludeIP](docsource/images/HPiLO-entry-parameters-store-type-dialog-IncludeIP-validation-options.png)
+
+
+
    </details>
 
 ## Installation
 
 1. **Download the latest HP iLO Universal Orchestrator extension from GitHub.**
 
-    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    Navigate to the [HP iLO Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/hp-ilo-orchestrator/releases/latest). Refer to the compatibility matrix below to determine the asset should be downloaded. Then, click the corresponding asset to download the zip archive.
 
    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `hp-ilo-orchestrator` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |
    | Older than `11.0.0` | | | `net6.0` |
    | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
-   | `11.6` _and_ newer | `net8.0` | | `net8.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` || Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
+   | `11.6` _and_ newer | `net8.0` | | `net8.0` | 
 
     Unzip the archive containing extension assemblies to a known location.
 

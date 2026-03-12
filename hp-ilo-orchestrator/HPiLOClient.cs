@@ -78,7 +78,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Determines what API Endpoint to hit based on the certificate type, used for both Reenrollment and Management Add.
+        ///     Determines what API Endpoint to hit based on the certificate type, used for both Reenrollment and Management Add.
         /// </summary>
         public bool AddCertificate(string PemCert, iLOCertType certType)
         {
@@ -115,7 +115,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Deletes a certificate from the iLO based on the provided certificate type.
+        ///     Deletes a certificate from the iLO based on the provided certificate type.
         /// </summary>
         public bool DeleteCertificate(iLOCertType csrType)
         {
@@ -147,7 +147,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Handles CSR generation for both iLOLDevID and HTTPSCert types for reenrollment.
+        ///     Handles CSR generation for both iLOLDevID and HTTPSCert types for reenrollment.
         /// </summary>
         public string GenerateCSR(string actionApiAddress, string distinguishedName, iLOCertType type, bool includeIP)
         {
@@ -221,7 +221,30 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Retrieves all certificates from the iLO, including HTTPSCert and iLOLDevID.
+        ///     Determines the enum certificate type by checking if the input string contains any of the substrings.
+        /// </summary>
+        public iLOCertType CheckType(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                _logger.LogError("Input is null or empty.  Please specify alias.");
+                throw new ArgumentException("Input cannot be null or empty.  Please specify alias.");
+            }
+
+            foreach (iLOCertType certType in Enum.GetValues(typeof(iLOCertType)))
+            {
+                if (input.Contains(certType.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return certType;
+                }
+            }
+
+            _logger.LogError("Unknown CSR type for input: {Input}. Please specify alias.", input);
+            throw new ArgumentException("Unknown CSR type based on alias input. Please specify alias.");
+        }
+
+        /// <summary>
+        ///     Retrieves all certificates from the iLO, including HTTPSCert and iLOLDevID.
         /// </summary>
         public List<CurrentInventoryItem> GetAllCertificates()
         {
@@ -238,7 +261,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
                     Alias = "HTTPSCert",
                     Certificates = ExportToPem(certs),
                     ItemStatus = OrchestratorInventoryItemStatus.Unknown,
-                    PrivateKeyEntry = false,
+                    PrivateKeyEntry = true,
                     UseChainLevel = true,
                     Parameters = Paramaters
                 }
@@ -270,7 +293,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Submits a certificate to iLO.
+        ///     Submits a certificate to iLO.
         /// </summary>
         public bool ImportCertificate(string certificate, string endpoint, iLOCertType certType)
         {
@@ -305,30 +328,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Determines the enum certificate type by checking if the input string contains any of the substrings.
-        /// </summary>
-        public iLOCertType CheckType(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                _logger.LogError("Input is null or empty.  Please specify alias.");
-                throw new ArgumentException("Input cannot be null or empty.  Please specify alias.");
-            }
-
-            foreach (iLOCertType certType in Enum.GetValues(typeof(iLOCertType)))
-            {
-                if (input.Contains(certType.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return certType;
-                }
-            }
-
-            _logger.LogError("Unknown CSR type for input: {Input}. Please specify alias.", input);
-            throw new ArgumentException("Unknown CSR type based on alias input. Please specify alias.");
-        }
-
-        /// <summary>
-        /// Concatenates a relative path with the base URI to build a full URI.
+        ///     Concatenates a relative path with the base URI to build a full URI.
         /// </summary>
         private Uri BuildUri(string relativePath)
         {
@@ -343,7 +343,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Wrapper for all GET requests to the Redfish API. Contains retry logic.
+        ///     Wrapper for all GET requests to the Redfish API. Contains retry logic.
         /// </summary>
         private T GetSync<T>(string relativePath, int maxRetries = 3)
         {
@@ -392,7 +392,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Extracts the Manager ID from a Redfish path.
+        ///     Extracts the Manager ID from a Redfish path.
         /// </summary>
         private int ExtractManagerID(string path)
         {
@@ -409,7 +409,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Prepares a certificate retrieved from Redfish into a Keyfactor-supported format.
+        ///     Prepares a certificate retrieved from Redfish into a Keyfactor-supported format.
         /// </summary>
         private List<CurrentInventoryItem> ProcessCert(string alias, ODataIdRef certRef)
         {
@@ -431,7 +431,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Extracts PEM-encoded certificates from a PEM blob, ignoring any other content and returning a chain in a list.
+        ///     Extracts PEM-encoded certificates from a PEM blob, ignoring any other content and returning a chain in a list.
         /// </summary>
         public static List<string> ExtractCertificates(string pemBlob)
         {
@@ -457,7 +457,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Basic function to handle parsing cert type from alias.
+        ///     Basic function to handle parsing cert type from alias.
         /// </summary>
         private static string GetCertificateTypeFromAlias(string alias)
         {
@@ -465,7 +465,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Retrieves certificates from the Redfish API using the provided link.
+        ///     Retrieves certificates from the Redfish API using the provided link.
         /// </summary>
         private List<iLOCertificateInfo> RetrieveCert(string certLink)
         {
@@ -495,7 +495,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Manually retrieves the TLS certificate chain from the iLO host.
+        ///     Manually retrieves the TLS certificate chain from the iLO host.
         /// </summary>
         public List<X509Certificate2> GetCertificateChain(string hostEntry, int port = 443, int maxRetries = 3)
         {
@@ -564,7 +564,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Parses the distinguished name and IP inclusion flag into a GenerateCSRHTTPSCert object.
+        ///     Parses the distinguished name and IP inclusion flag into a GenerateCSRHTTPSCert object.
         /// </summary>
         public static GenerateCSRHTTPSCert ParseSubjectText(string distinguishedName, bool includeIP)
         {
@@ -608,7 +608,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Strips the scheme (http/https) from a URL.
+        ///     Strips the scheme (http/https) from a URL.
         /// </summary>
         private static string StripScheme(string url)
         {
@@ -633,7 +633,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        /// Processes the manually retrieved TLS certificates into PEM format for Keyfactor.
+        ///     Processes the manually retrieved TLS certificates into PEM format for Keyfactor.
         /// </summary>
         private static string[] ExportToPem(IEnumerable<X509Certificate2> certificates)
         {

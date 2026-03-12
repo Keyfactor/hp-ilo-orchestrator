@@ -22,7 +22,6 @@ using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -156,7 +155,7 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
 
 
         /// <summary>
-        /// Simply provides a PEM formatted cert without a private key or extra text
+        ///     Simply provides a PEM formatted cert without a private key or extra text
         /// </summary>
         /// <param name="certBytes"></param>
         /// <returns></returns>
@@ -166,8 +165,9 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                    Convert.ToBase64String(certBytes, Base64FormattingOptions.InsertLineBreaks) +
                    "\n-----END CERTIFICATE-----";
         }
+
         /// <summary>
-        /// Preps an x509Certificate2 for export with private key to HPiLO
+        ///     Preps an x509Certificate2 for export with private key to HPiLO
         /// </summary>
         /// <param name="certificate"></param>
         /// <returns></returns>

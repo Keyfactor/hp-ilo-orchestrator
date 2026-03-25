@@ -158,8 +158,8 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO.Jobs
                                 }
                                 //else type is pfx.
                             }
-
                         }
+
                         if (certTypeAdd == iLOCertType.HTTPSCert)
                         {
                             if (APIclient.AddCertificate(

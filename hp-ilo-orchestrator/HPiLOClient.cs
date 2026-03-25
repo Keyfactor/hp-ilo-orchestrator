@@ -328,7 +328,30 @@ namespace Keyfactor.Extensions.Orchestrator.HPiLO
         }
 
         /// <summary>
-        ///     Concatenates a relative path with the base URI to build a full URI.
+        /// Determines the enum certificate type by checking if the input string contains any of the substrings.
+        /// </summary>
+        public iLOCertType CheckType(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                _logger.LogError("Input is null or empty.  Please specify alias.");
+                throw new ArgumentException("Input cannot be null or empty.  Please specify alias.");
+            }
+
+            foreach (iLOCertType certType in Enum.GetValues(typeof(iLOCertType)))
+            {
+                if (input.Contains(certType.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return certType;
+                }
+            }
+
+            _logger.LogError("Unknown CSR type for input: {Input}. Please specify alias.", input);
+            throw new ArgumentException("Unknown CSR type based on alias input. Please specify alias.");
+        }
+
+        /// <summary>
+        /// Concatenates a relative path with the base URI to build a full URI.
         /// </summary>
         private Uri BuildUri(string relativePath)
         {

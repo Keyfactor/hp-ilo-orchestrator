@@ -1,4 +1,8 @@
 ﻿# Changelog
+## V.1.1.3
+### Fixes
+- Fixed an issue where using workflows to carry out certificate renewal would not work. 
+
 ## V1.1.2
 ### Fixes
 - Improved docs.
